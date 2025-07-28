@@ -1,0 +1,22 @@
+# SvelteKit
+.svelte-kit
+build
+dist
+
+# Node
+node_modules
+
+# PocketBase
+/backend/pb_data
+/backend/pb_migrations
+/backend/pocketbase.exe
+/backend/pocketbase
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.*
+!.env.example
