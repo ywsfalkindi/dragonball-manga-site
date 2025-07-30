@@ -15,6 +15,7 @@
 	const PRELOAD_AHEAD_COUNT = 3;
 
 	let showSettings = false;
+	let showThumbnails = false;
 
 	$: {
 		if ($readingMode === 'horizontal' && pages.length > 0) {
@@ -111,6 +112,12 @@
 
 			<div class="flex items-center gap-x-4 relative">
 				<h1 class="font-bold text-lg text-center hidden md:block">{manga.title} - #{chapter.chapter_number}</h1>
+				
+				<!-- svelte-ignore a11y_consider_explicit_label -->
+				<button on:click={() => showThumbnails = !showThumbnails} class="text-gray-300 hover:text-white" title="قائمة الصفحات">
+					<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+				</button>
+
 				<!-- svelte-ignore a11y_consider_explicit_label -->
 				<button on:click={() => showSettings = !showSettings} class="text-gray-300 hover:text-white" title="إعدادات القارئ">
 					<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 0 2l-.15.08a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1 0-2l.15-.08a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
@@ -154,14 +161,47 @@
         </div>
 	</header>
 	
+	{#if showThumbnails}
+	<div class="thumbnails-sidebar fixed top-0 left-0 h-full w-48 bg-gray-900/90 backdrop-blur-md z-30 overflow-y-auto p-2" dir="ltr">
+		<h3 class="text-white text-center font-bold p-2">الصفحات</h3>
+		<div class="grid grid-cols-2 gap-2">
+			{#each pages as page, i}
+				<a href={$readingMode === 'vertical' ? `#page-${i}` : '#'}
+				   on:click={() => {
+					   if ($readingMode === 'horizontal') { currentPageIndex = i; }
+					   showThumbnails = false;
+				   }}
+				   class="thumbnail-item group relative rounded overflow-hidden border-2"
+				   class:border-orange-500={$readingMode === 'horizontal' && currentPageIndex === i}
+				   class:border-transparent={$readingMode !== 'horizontal' || currentPageIndex !== i}
+				>
+					<img
+						src="{baseCdnUrl}/{page.image_path}?width=150&quality=75"
+						alt="صفحة {i + 1}"
+						class="w-full h-auto"
+						loading="lazy"
+					/>
+					<div class="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-bold opacity-0 group-hover:opacity-100 transition-opacity">
+						{i + 1}
+					</div>
+				</a>
+			{/each}
+		</div>
+	</div>
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="fixed inset-0 z-20" on:click={() => showThumbnails = false}></div>
+	{/if}
+
 	<main class="flex flex-col items-center pt-8 pb-4">
 		{#if pages.length > 0}
 			{#if $readingMode === 'vertical'}
-				{#each pages as page}
+				{#each pages as page, i}
 					<img
+						id="page-{i}"
 						src="{baseCdnUrl}/{page.image_path}?width=1200&quality=85"
 						alt="صفحة رقم {page.page_number}"
-						class="mb-2 shadow-md mx-auto"
+						class="mb-2 shadow-md mx-auto scroll-mt-20"
 						class:fit-width={$imageFitMode === 'fit-width'}
 						class:fit-height={$imageFitMode === 'fit-height'}
 						class:original-size={$imageFitMode === 'original'}
@@ -325,5 +365,10 @@
 .fit-width-horizontal-double {
     max-width: 49%;
     max-height: 85vh;
+}
+
+/* Thumbnails sidebar */
+.scroll-mt-20 {
+	scroll-margin-top: 5rem;
 }
 </style>
