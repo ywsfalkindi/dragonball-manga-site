@@ -2,34 +2,30 @@
 <script lang="ts">
 	import type { ActionData, PageData } from './$types';
 	import { readingMode } from '$lib/stores/settings';
-	import { goto } from '$app/navigation'; // 🔽 استدعاء دالة التنقل 🔽
+	import { goto } from '$app/navigation';
 
 	export let data: PageData;
 	export let form: ActionData;
-
 	const { user, manga, chapter, pages, comments } = data;
 	const currentChapter = Number(chapter.chapter_number);
 	let currentPageIndex = 0;
 
-	// تأكد من استبدال الرابط بالرابط الصحيح الخاص بك من Bunny.net
+	// ✨ السطر الجديد الخاص بحساب التقدم ✨
+	$: progress = pages.length > 0 ? ((currentPageIndex + 1) / pages.length) * 100 : 0;
+
 	const baseCdnUrl = "https://dragonball-cdn.b-cdn.net";
 
-	// 🔽🔽 الدالة الجديدة للتحكم بلوحة المفاتيح 🔽🔽
 	function handleKeydown(event: KeyboardEvent) {
 		if ($readingMode === 'horizontal') {
-			// التحكم في الوضع الأفقي
 			if (event.key === 'ArrowRight') {
 				currentPageIndex = Math.min(pages.length - 1, currentPageIndex + 1);
 			} else if (event.key === 'ArrowLeft') {
 				currentPageIndex = Math.max(0, currentPageIndex - 1);
 			}
 		} else {
-			// التحكم في الوضع العمودي
 			if (event.key === 'ArrowRight') {
-				// الانتقال للفصل التالي
 				goto(`/manga/${manga.slug}/${currentChapter + 1}`);
 			} else if (event.key === 'ArrowLeft') {
-				// الانتقال للفصل السابق
 				goto(`/manga/${manga.slug}/${currentChapter - 1}`);
 			}
 		}
@@ -46,7 +42,6 @@
 			<a href="/manga/{manga.slug}" class="hover:text-orange-500 transition-colors text-sm md:text-base">
 				&larr; قائمة الفصول
 			</a>
-
 			<div class="flex items-center space-x-2">
 				<button
 					on:click={() => readingMode.set('vertical')}
@@ -65,9 +60,12 @@
 					أفقي
 				</button>
 			</div>
-
 			<h1 class="font-bold text-lg text-center hidden md:block">{manga.title} - #{chapter.chapter_number}</h1>
 		</div>
+
+        <div class="w-full bg-gray-600 h-1">
+            <div class="bg-orange-500 h-1" style="width: {progress}%"></div>
+        </div>
 	</header>
 
 	<main class="flex flex-col items-center pt-8 pb-4">
@@ -93,13 +91,11 @@
 						>
 							<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
 						</button>
-
 						<img
 							src="{baseCdnUrl}/{pages[currentPageIndex].image_path}?width=1200&quality=85"
 							alt="صفحة رقم {pages[currentPageIndex].page_number}"
 							class="max-w-full shadow-md"
 						/>
-
 						<!-- svelte-ignore a11y_consider_explicit_label -->
 						<button
 							on:click={() => (currentPageIndex = Math.min(pages.length - 1, currentPageIndex + 1))}
@@ -137,7 +133,6 @@
         <h2 class="text-3xl font-bold text-white mb-6 border-b-2 border-gray-700 pb-2">
             التعليقات ({comments.length})
         </h2>
-
         {#if user}
             <form method="POST" action="?/addComment" class="mb-8">
                 <div class="bg-gray-800 rounded-lg p-4">
@@ -161,7 +156,6 @@
                 <p><a href="/login" class="text-orange-500 hover:underline font-bold">سجل دخولك</a> لتتمكن من إضافة تعليق.</p>
             </div>
         {/if}
-
         <div class="space-y-6">
             {#each comments as comment}
                 <article class="flex space-x-4">
