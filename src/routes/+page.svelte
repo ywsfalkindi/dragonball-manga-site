@@ -5,7 +5,8 @@
 	import { cubicOut } from 'svelte/easing';
 
 	export let data: PageData;
-	const { mangas } = data;
+	// استيراد متغيرات الفرز والتصفية
+	const { mangas, sort, status } = data;
 
 	let stage = 0;
 	onMount(() => {
@@ -59,27 +60,55 @@
 	</header>
 
 	<main class="container mx-auto px-4 py-16">
-		<h2 class="text-3xl md:text-4xl font-bold text-center mb-12 text-orange-500">اختر السلسلة</h2>
-		<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 md:gap-10">
-			{#each mangas as manga}
-				<a
-					href="/manga/{manga.slug}"
-					class="bg-gray-800 rounded-lg overflow-hidden shadow-xl transform hover:-translate-y-2 hover:shadow-2xl transition-all duration-300 group"
+		<h2 class="text-3xl md:text-4xl font-bold text-center mb-6 text-orange-500">اختر السلسلة</h2>
+
+		<div class="flex flex-wrap justify-center items-center gap-4 mb-12">
+			<div class="flex items-center gap-2 p-1 bg-gray-800 rounded-lg">
+				<a href="?sort=-created&status={status || ''}" class="px-4 py-2 text-sm rounded-md transition-colors {sort === '-created' ? 'bg-orange-600' : 'hover:bg-gray-700'}">الأحدث</a>
+				<a href="?sort=title&status={status || ''}" class="px-4 py-2 text-sm rounded-md transition-colors {sort === 'title' ? 'bg-orange-600' : 'hover:bg-gray-700'}">أبجدي</a>
+			</div>
+			<div class="relative">
+				<select
+					on:change={(e) => {
+						const newStatus = e.currentTarget.value;
+						window.location.href = `?sort=${sort}&status=${newStatus}`;
+					}}
+					class="appearance-none bg-gray-800 text-white px-4 py-2 rounded-lg pr-8 focus:outline-none focus:ring-2 focus:ring-orange-500"
 				>
-					<div class="h-64 w-full overflow-hidden">
-						<img
-							src={manga.cover_image_url}
-							alt="غلاف مانجا {manga.title}"
-							class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-						/>
-					</div>
-					<div class="p-6">
-						<h3 class="text-2xl font-bold mb-2">{manga.title}</h3>
-						<p class="text-gray-400 leading-relaxed">{manga.description}</p>
-					</div>
-				</a>
-			{/each}
+					<option value="" selected={status === ''}>كل الحالات</option>
+					<option value="ongoing" selected={status === 'ongoing'}>مستمرة</option>
+					<option value="completed" selected={status === 'completed'}>مكتملة</option>
+				</select>
+				<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+					<svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+				</div>
+			</div>
 		</div>
+
+		{#if mangas.length > 0}
+			<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 md:gap-10">
+				{#each mangas as manga}
+					<a
+						href="/manga/{manga.slug}"
+						class="bg-gray-800 rounded-lg overflow-hidden shadow-xl transform hover:-translate-y-2 hover:shadow-2xl transition-all duration-300 group"
+					>
+						<div class="h-64 w-full overflow-hidden">
+							<img
+								src={manga.cover_image_url}
+								alt="غلاف مانجا {manga.title}"
+								class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+							/>
+						</div>
+						<div class="p-6">
+							<h3 class="text-2xl font-bold mb-2">{manga.title}</h3>
+							<p class="text-gray-400 leading-relaxed">{manga.description}</p>
+						</div>
+					</a>
+				{/each}
+			</div>
+		{:else}
+			<p class="text-center text-gray-400 text-xl">لا توجد مانجا تطابق خيارات البحث الحالية.</p>
+		{/if}
 	</main>
 </div>
 
