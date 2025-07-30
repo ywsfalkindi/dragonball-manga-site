@@ -1,8 +1,9 @@
 <script lang="ts">
 	import type { PageData } from './$types';
-	export let data: PageData;
 
-	const { manga, chapters } = data;
+	export let data: PageData;
+	const { manga, isFavorited, chaptersResult, readChapterIds, lastReadChapter, user } = data;
+	const chapters = chaptersResult.items;
 </script>
 
 <svelte:head>
@@ -10,41 +11,90 @@
 </svelte:head>
 
 <div class="min-h-screen bg-gray-900 text-white font-[Tajawal]">
-	<header class="relative h-[50vh] flex items-end p-8 bg-cover bg-center" style="background-image: url({manga.cover_image_url})">
-    <div class="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/80 to-transparent" />
-    <div class="relative z-10">
-        <h1 class="text-5xl font-extrabold">{manga.title}</h1>
-        <p class="mt-4 text-lg max-w-2xl text-gray-300">{manga.description}</p>
+	<header
+		class="relative h-[60vh] flex items-end p-8 bg-cover bg-center bg-fixed"
+		style="background-image: url({manga.cover_image_url})"
+	>
+		<!-- svelte-ignore element_invalid_self_closing_tag -->
+		<div class="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/80 to-transparent" />
+		<div class="relative z-10">
+			<h1 class="text-5xl font-extrabold">{manga.title}</h1>
+			<p class="mt-4 text-lg max-w-2xl text-gray-300">{manga.description}</p>
 
-        {#if data.user}
-            <div class="mt-6">
-                <form method="POST" action="?/{data.isFavorited ? 'unfavorite' : 'favorite'}">
-                    <button type="submit" class="bg-orange-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-orange-700 transition-all">
-                        {data.isFavorited ? '❤️ إزالة من المفضلة' : '🤍 إضافة إلى المفضلة'}
-                    </button>
-                </form>
-            </div>
-        {/if}
-        </div>
-</header>
+			{#if user}
+				<div class="mt-6 flex items-center space-x-4 flex-wrap gap-y-4">
+					<form method="POST" action="?/{isFavorited ? 'unfavorite' : 'favorite'}">
+						<button
+							type="submit"
+							class="bg-orange-600 text-white font-bold py-2 px-6 rounded-lg transition-colors hover:bg-orange-500"
+						>
+							<span>{isFavorited ? '❤️' : '🤍'}</span>
+							<span>{isFavorited ? 'إزالة من المفضلة' : 'إضافة إلى المفضلة'}</span>
+						</button>
+					</form>
+					{#if lastReadChapter}
+						<a
+							href="/manga/{manga.slug}/{lastReadChapter.chapter_number}"
+							class="inline-block bg-green-600 text-white font-bold py-2 px-6 rounded-lg transition-colors hover:bg-green-500"
+						>
+							🚀 أكمل القراءة (الفصل #{lastReadChapter.chapter_number})
+						</a>
+					{/if}
+				</div>
+			{/if}
+		</div>
+	</header>
 
 	<main class="container mx-auto px-4 py-12">
 		<h2 class="text-3xl font-bold mb-6 text-orange-500">قائمة الفصول</h2>
 		<div class="bg-gray-800 rounded-lg shadow-lg">
 			<ul class="divide-y divide-gray-700">
-				{#each chapters as chapter}
-					<a href="/manga/{manga.slug}/{chapter.chapter_number}" class="block p-6 hover:bg-gray-700/50 transition-colors duration-200">
-						<li class="flex items-center justify-between">
-							<span class="text-xl font-semibold">الفصل #{chapter.chapter_number}</span>
-							<span class="bg-orange-500 text-white text-sm font-bold py-1 px-3 rounded-full">اقرأ الآن</span>
-						</li>
-					</a>
+				{#each chapters as chapter (chapter.id)}
+					<li>
+						<a
+							href="/manga/{manga.slug}/{chapter.chapter_number}"
+							class="block p-6 hover:bg-gray-700/50 transition-colors duration-200 items-center justify-between"
+						>
+							<div class="flex items-center">
+								<span class="text-xl font-semibold">الفصل #{chapter.chapter_number}</span>
+								{#if readChapterIds.has(chapter.id)}
+									<span class="ml-3 text-xs bg-blue-500 text-white py-1 px-2 rounded-full"
+										>مقروء</span
+									>
+								{/if}
+							</div>
+							<span class="bg-orange-500 text-white text-sm font-bold py-1 px-3 rounded-full"
+								>اقرأ الآن</span
+							>
+						</a>
+					</li>
 				{:else}
-                    <li class="p-6 text-center text-gray-400">
-                        لم تتم إضافة أي فصول لهذه المانجا بعد.
-                    </li>
-                {/each}
+					<li class="p-6 text-center text-gray-400">لم تتم إضافة أي فصول لهذه المانجا بعد.</li>
+				{/each}
 			</ul>
+			<div class="flex justify-center items-center space-x-4 mt-8 pb-6 text-white" dir="ltr">
+				<a
+					href="?page={chaptersResult.page - 1}"
+					class="py-2 px-4 bg-gray-700 rounded {chaptersResult.page === 1
+						? 'opacity-50 pointer-events-none'
+						: 'hover:bg-orange-600'}"
+				>
+					&laquo; السابق
+				</a>
+				<span> صفحة {chaptersResult.page} من {chaptersResult.totalPages} </span>
+				<a
+					href="?page={chaptersResult.page + 1}"
+					class="py-2 px-4 bg-gray-700 rounded {chaptersResult.page ===
+					chaptersResult.totalPages
+						? 'opacity-50 pointer-events-none'
+						: 'hover:bg-orange-600'}"
+				>
+					التالي &raquo;
+				</a>
+			</div>
 		</div>
 	</main>
 </div>
+<style>
+    /* يمكنك إبقاء الـ style فارغًا أو حذف كود الأنيميشن السابق */
+</style>
