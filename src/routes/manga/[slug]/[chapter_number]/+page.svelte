@@ -1,17 +1,39 @@
+<svelte:window on:keydown={handleKeydown} />
 <script lang="ts">
 	import type { ActionData, PageData } from './$types';
 	import { readingMode } from '$lib/stores/settings';
+	import { goto } from '$app/navigation'; // 🔽 استدعاء دالة التنقل 🔽
 
 	export let data: PageData;
 	export let form: ActionData;
 
 	const { user, manga, chapter, pages, comments } = data;
 	const currentChapter = Number(chapter.chapter_number);
-
 	let currentPageIndex = 0;
 
 	// تأكد من استبدال الرابط بالرابط الصحيح الخاص بك من Bunny.net
 	const baseCdnUrl = "https://dragonball-cdn.b-cdn.net";
+
+	// 🔽🔽 الدالة الجديدة للتحكم بلوحة المفاتيح 🔽🔽
+	function handleKeydown(event: KeyboardEvent) {
+		if ($readingMode === 'horizontal') {
+			// التحكم في الوضع الأفقي
+			if (event.key === 'ArrowRight') {
+				currentPageIndex = Math.min(pages.length - 1, currentPageIndex + 1);
+			} else if (event.key === 'ArrowLeft') {
+				currentPageIndex = Math.max(0, currentPageIndex - 1);
+			}
+		} else {
+			// التحكم في الوضع العمودي
+			if (event.key === 'ArrowRight') {
+				// الانتقال للفصل التالي
+				goto(`/manga/${manga.slug}/${currentChapter + 1}`);
+			} else if (event.key === 'ArrowLeft') {
+				// الانتقال للفصل السابق
+				goto(`/manga/${manga.slug}/${currentChapter - 1}`);
+			}
+		}
+	}
 </script>
 
 <svelte:head>
