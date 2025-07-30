@@ -14,18 +14,18 @@
             class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
         />
     </div>
-    <div class="p-6 flex flex-col flex-grow">
-        <h3 class="text-2xl font-bold mb-2">{manga.title}</h3>
-        <p class="text-gray-400 leading-relaxed line-clamp-3">{manga.description}</p>
+    <div class="p-4 md:p-6 flex flex-col flex-grow">
+        <h3 class="text-xl md:text-2xl font-bold mb-2">{manga.title}</h3>
+        <p class="text-sm md:text-base text-gray-400 leading-relaxed line-clamp-3">{manga.description}</p>
     </div>
 </a>
 
 <style>
     .line-clamp-3 {
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
-    line-clamp: 3; /* Add this line */
-}
+		overflow: hidden;
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 3;
+		line-clamp: 3;
+	}
 </style>
