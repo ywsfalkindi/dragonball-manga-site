@@ -1,9 +1,9 @@
-<svelte:window on:keydown={handleKeydown} />
+<svelte:window on:keydown={handleKeydown} on:scroll={handleScroll} />
 <script lang="ts">
 	import type { ActionData, PageData } from './$types';
 	import { pageDisplayMode, readingMode, readerBackgroundColor, imageFitMode } from '$lib/stores/settings';
 	import { goto } from '$app/navigation';
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 
 	export let data: PageData;
 	export let form: ActionData;
@@ -16,6 +16,46 @@
 
 	let showSettings = false;
 	let showThumbnails = false;
+
+	// المتغيرات الجديدة للتحكم في الواجهة
+	let uiVisible = true;
+	let inactivityTimer: number;
+
+	// دوال التحكم في إظهار وإخفاء الواجهة
+	function hideUI() {
+		if (showSettings || showThumbnails) return;
+		uiVisible = false;
+	}
+
+	function resetTimer() {
+		uiVisible = true;
+		clearTimeout(inactivityTimer);
+		inactivityTimer = setTimeout(hideUI, 3000); // إخفاء الواجهة بعد 3 ثوانٍ
+	}
+	
+	let lastScrollY = 0;
+	function handleScroll() {
+		if(window.scrollY < lastScrollY) {
+			resetTimer();
+		}
+		lastScrollY = window.scrollY;
+	}
+
+	onMount(() => {
+		resetTimer();
+		const updateFullscreenStatus = () => {
+			isFullscreen = document.fullscreenElement !== null;
+		};
+		document.addEventListener('fullscreenchange', updateFullscreenStatus);
+		return () => {
+			document.removeEventListener('fullscreenchange', updateFullscreenStatus);
+			clearTimeout(inactivityTimer);
+		};
+	});
+
+	onDestroy(() => {
+		clearTimeout(inactivityTimer);
+	});
 
 	$: {
 		if ($readingMode === 'horizontal' && pages.length > 0) {
@@ -41,13 +81,6 @@
 		}
 	}
 
-	onMount(() => {
-		const updateFullscreenStatus = () => {
-			isFullscreen = document.fullscreenElement !== null;
-		};
-		document.addEventListener('fullscreenchange', updateFullscreenStatus);
-		return () => document.removeEventListener('fullscreenchange', updateFullscreenStatus);
-	});
 	function handleKeydown(event: KeyboardEvent) {
 		if (event.key === 'f') {
 			event.preventDefault();
@@ -81,8 +114,23 @@
     {/each}
 </div>
 
-<div class="reader-container min-h-screen font-[Tajawal]" style="background-color: {$readerBackgroundColor};">
-	<header class="sticky top-0 z-20 bg-gray-900/80 backdrop-blur-md text-white shadow-lg sticky-header">
+<!-- svelte-ignore a11y_click_events_have_key_events -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div 
+	class="reader-container min-h-screen font-[Tajawal]" 
+	style="background-color: {$readerBackgroundColor};"
+	on:mousemove={resetTimer}
+	on:touchstart={resetTimer}
+	on:click={() => {
+		if (!uiVisible) {
+			resetTimer();
+		}
+	}}
+>
+	<header 
+		class="sticky top-0 z-20 bg-gray-900/80 backdrop-blur-md text-white shadow-lg sticky-header"
+		class:header-hidden={!uiVisible}
+	>
 		<div class="container mx-auto px-4 py-3 flex justify-between items-center">
 			<a href="/manga/{manga.slug}" class="hover:text-orange-500 transition-colors text-sm md:text-base">
 				&larr; قائمة الفصول
@@ -188,9 +236,7 @@
 			{/each}
 		</div>
 	</div>
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="fixed inset-0 z-20" on:click={() => showThumbnails = false}></div>
+	<div class="fixed inset-0 z-20 bg-black/30" on:click={() => showThumbnails = false}></div>
 	{/if}
 
 	<main class="flex flex-col items-center pt-8 pb-4">
@@ -268,7 +314,10 @@
 			</div>
 		{/if}
 	</main>
-	<footer class="container mx-auto px-4 py-6 flex justify-between items-center text-white">
+	<footer 
+		class="reader-footer container mx-auto px-4 py-6 flex justify-between items-center text-white"
+		class:footer-hidden={!uiVisible}
+	>
 		<a
 			href="/manga/{manga.slug}/{currentChapter - 1}"
 			class="bg-orange-600 py-2 px-6 rounded hover:bg-orange-700 transition-colors {currentChapter <= 1 ? 'opacity-50 pointer-events-none' : ''}">الفصل السابق</a
@@ -370,5 +419,28 @@
 /* Thumbnails sidebar */
 .scroll-mt-20 {
 	scroll-margin-top: 5rem;
+}
+
+/* UI Auto-hide Styles */
+.sticky-header, .reader-footer {
+	transition: transform 0.3s ease-in-out;
+	position: sticky;
+	width: 100%;
+}
+
+.sticky-header {
+	top: 0;
+}
+
+.reader-footer {
+	bottom: 0;
+}
+
+.header-hidden {
+	transform: translateY(-100%);
+}
+
+.footer-hidden {
+	transform: translateY(100%);
 }
 </style>
