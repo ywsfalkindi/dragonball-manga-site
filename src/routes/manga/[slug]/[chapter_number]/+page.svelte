@@ -1,7 +1,7 @@
 <svelte:window on:keydown={handleKeydown} />
 <script lang="ts">
 	import type { ActionData, PageData } from './$types';
-	import { pageDisplayMode, readingMode } from '$lib/stores/settings';
+	import { pageDisplayMode, readingMode, readerBackgroundColor, imageFitMode } from '$lib/stores/settings';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 
@@ -10,11 +10,11 @@
 	const { user, manga, chapter, pages, comments } = data;
 	const currentChapter = Number(chapter.chapter_number);
 	let currentPageIndex = 0;
-
 	$: progress = pages.length > 0 ? ((currentPageIndex + 1) / pages.length) * 100 : 0;
-
 	let imagesToPreload: string[] = [];
 	const PRELOAD_AHEAD_COUNT = 3;
+
+	let showSettings = false;
 
 	$: {
 		if ($readingMode === 'horizontal' && pages.length > 0) {
@@ -47,8 +47,6 @@
 		document.addEventListener('fullscreenchange', updateFullscreenStatus);
 		return () => document.removeEventListener('fullscreenchange', updateFullscreenStatus);
 	});
-
-
 	function handleKeydown(event: KeyboardEvent) {
 		if (event.key === 'f') {
 			event.preventDefault();
@@ -82,7 +80,7 @@
     {/each}
 </div>
 
-<div class="reader-container bg-black min-h-screen font-[Tajawal]">
+<div class="reader-container min-h-screen font-[Tajawal]" style="background-color: {$readerBackgroundColor};">
 	<header class="sticky top-0 z-20 bg-gray-900/80 backdrop-blur-md text-white shadow-lg sticky-header">
 		<div class="container mx-auto px-4 py-3 flex justify-between items-center">
 			<a href="/manga/{manga.slug}" class="hover:text-orange-500 transition-colors text-sm md:text-base">
@@ -111,8 +109,12 @@
 				{/if}
 			</div>
 
-			<div class="flex items-center gap-x-4">
+			<div class="flex items-center gap-x-4 relative">
 				<h1 class="font-bold text-lg text-center hidden md:block">{manga.title} - #{chapter.chapter_number}</h1>
+				<!-- svelte-ignore a11y_consider_explicit_label -->
+				<button on:click={() => showSettings = !showSettings} class="text-gray-300 hover:text-white" title="إعدادات القارئ">
+					<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 0 2l-.15.08a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1 0-2l.15-.08a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+				</button>
 				<button on:click={toggleFullscreen} class="text-gray-300 hover:text-white" title="تبديل وضع ملء الشاشة (F)">
 					{#if isFullscreen}
 						<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>
@@ -120,8 +122,33 @@
 						<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
 					{/if}
 				</button>
+
+                {#if showSettings}
+                <div class="absolute top-full right-0 mt-2 bg-gray-800 rounded-lg shadow-lg p-4 text-sm w-64 border border-gray-700">
+                    <div class="mb-4">
+                        <p class="font-bold mb-2 text-white">لون الخلفية</p>
+                        <div class="flex gap-2">
+                            <!-- svelte-ignore a11y_consider_explicit_label -->
+                            <button on:click={() => readerBackgroundColor.set('black')} class:ring-orange-500={$readerBackgroundColor === 'black'} class="w-8 h-8 rounded-full bg-black border border-gray-600 ring-2 ring-transparent"></button>
+                            <!-- svelte-ignore a11y_consider_explicit_label -->
+                            <button on:click={() => readerBackgroundColor.set('white')} class:ring-orange-500={$readerBackgroundColor === 'white'} class="w-8 h-8 rounded-full bg-white border border-gray-400 ring-2 ring-transparent"></button>
+                            <!-- svelte-ignore a11y_consider_explicit_label -->
+                            <button on:click={() => readerBackgroundColor.set('#f4e8d8')} class:ring-orange-500={$readerBackgroundColor === '#f4e8d8'} class="w-8 h-8 rounded-full bg-[#f4e8d8] border border-gray-400 ring-2 ring-transparent"></button>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="font-bold mb-2 text-white">طريقة عرض الصور</p>
+                        <div class="flex flex-col gap-2">
+                            <button on:click={() => imageFitMode.set('fit-width')} class:bg-orange-600={$imageFitMode === 'fit-width'} class="text-right w-full p-2 rounded bg-gray-700 hover:bg-gray-600">ملاءمة العرض</button>
+                            <button on:click={() => imageFitMode.set('fit-height')} class:bg-orange-600={$imageFitMode === 'fit-height'} class="text-right w-full p-2 rounded bg-gray-700 hover:bg-gray-600">ملاءمة الطول</button>
+                            <button on:click={() => imageFitMode.set('original')} class:bg-orange-600={$imageFitMode === 'original'} class="text-right w-full p-2 rounded bg-gray-700 hover:bg-gray-600">الحجم الأصلي</button>
+                        </div>
+                    </div>
+                </div>
+                {/if}
 			</div>
 		</div>
+    
         <div class="w-full bg-gray-600 h-1">
             <div class="bg-orange-500 h-1" style="width: {progress}%"></div>
         </div>
@@ -134,7 +161,10 @@
 					<img
 						src="{baseCdnUrl}/{page.image_path}?width=1200&quality=85"
 						alt="صفحة رقم {page.page_number}"
-						class="max-w-full md:max-w-4xl mb-2 shadow-md"
+						class="mb-2 shadow-md mx-auto"
+						class:fit-width={$imageFitMode === 'fit-width'}
+						class:fit-height={$imageFitMode === 'fit-height'}
+						class:original-size={$imageFitMode === 'original'}
 						loading="lazy"
 					/>
 				{/each}
@@ -151,19 +181,25 @@
 						>
 							<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
 						</button>
-						<div class="flex justify-center items-start gap-2">
+						<div class="flex justify-center items-start gap-2"
+                             class:fit-height-container={$imageFitMode === 'fit-height'}>
 							<img
 								src="{baseCdnUrl}/{pages[currentPageIndex].image_path}?width=1200&quality=85"
 								alt="صفحة رقم {pages[currentPageIndex].page_number}"
-								class="max-h-[85vh] object-contain shadow-md {($pageDisplayMode === 'single' || !pages[currentPageIndex + 1])
-									? 'max-w-full md:max-w-4xl'
-									: 'max-w-[48%]'}"
+								class="object-contain shadow-md"
+                                class:fit-width-horizontal-single={($pageDisplayMode === 'single' || !pages[currentPageIndex + 1]) && $imageFitMode !== 'fit-height'}
+                                class:fit-width-horizontal-double={$pageDisplayMode === 'double' && pages[currentPageIndex + 1] && $imageFitMode !== 'fit-height'}
+                                class:fit-height={$imageFitMode === 'fit-height'}
+                                class:original-size={$imageFitMode === 'original'}
 							/>
 							{#if $pageDisplayMode === 'double' && pages[currentPageIndex + 1]}
 								<img
 									src="{baseCdnUrl}/{pages[currentPageIndex + 1].image_path}?width=1200&quality=85"
 									alt="صفحة رقم {pages[currentPageIndex + 1].page_number}"
-									class="max-w-[48%] max-h-[85vh] object-contain shadow-md"
+									class="object-contain shadow-md"
+                                    class:fit-width-horizontal-double={$imageFitMode !== 'fit-height'}
+                                    class:fit-height={$imageFitMode === 'fit-height'}
+                                    class:original-size={$imageFitMode === 'original'}
 								/>
 							{/if}
 						</div>
@@ -195,9 +231,7 @@
 	<footer class="container mx-auto px-4 py-6 flex justify-between items-center text-white">
 		<a
 			href="/manga/{manga.slug}/{currentChapter - 1}"
-			class="bg-orange-600 py-2 px-6 rounded hover:bg-orange-700 transition-colors {currentChapter <= 1
-				? 'opacity-50 pointer-events-none'
-				: ''}">الفصل السابق</a
+			class="bg-orange-600 py-2 px-6 rounded hover:bg-orange-700 transition-colors {currentChapter <= 1 ? 'opacity-50 pointer-events-none' : ''}">الفصل السابق</a
 		>
 		<a
 			href="/manga/{manga.slug}/{currentChapter + 1}"
@@ -211,7 +245,7 @@
         {#if user}
             <form method="POST" action="?/addComment" class="mb-8">
                 <div class="bg-gray-800 rounded-lg p-4">
-                    <textarea 
+                   <textarea 
                         name="content" 
                         rows="4" 
                         placeholder="أضف تعليقك هنا..."
@@ -223,23 +257,23 @@
                     {/if}
                     <button type="submit" class="mt-4 bg-orange-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-orange-700">
                         إرسال التعليق
-                    </button>
+                     </button>
                 </div>
             </form>
         {:else}
             <div class="mb-8 text-center bg-gray-800 p-6 rounded-lg">
                 <p><a href="/login" class="text-orange-500 hover:underline font-bold">سجل دخولك</a> لتتمكن من إضافة تعليق.</p>
-            </div>
+           </div>
         {/if}
         <div class="space-y-6">
             {#each comments as comment}
                 <article class="flex space-x-4">
                     {#if comment.expand?.user}
                         <div class="flex-shrink-0">
-                            <div class="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center font-bold">
+                           <div class="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center font-bold text-white">
                                 {comment.expand.user.email.charAt(0).toUpperCase()}
                             </div>
-                        </div>
+                         </div>
                         <div class="bg-gray-800 rounded-lg p-4 flex-grow">
                             <p class="font-bold text-orange-400">{comment.expand.user.email}</p>
                             <div class="prose prose-invert text-gray-300 mt-2">
@@ -258,8 +292,38 @@
 <style>
 .prose { max-width: none; }
 
-/* ✨ إخفاء الهيدر في وضع ملء الشاشة ✨ */
 :global(:root:fullscreen .sticky-header) {
 	display: none;
+}
+
+/* Vertical Reading Mode Styles */
+.fit-width {
+	max-width: 100%;
+	width: 100%;
+	height: auto;
+}
+.fit-height {
+	max-height: 90vh;
+	width: auto;
+	max-width: none;
+}
+.original-size {
+	width: auto;
+	height: auto;
+	max-width: none;
+	max-height: none;
+}
+
+/* Horizontal Reading Mode Styles */
+.fit-height-container {
+    height: 90vh;
+}
+.fit-width-horizontal-single {
+    max-width: 100%;
+    max-height: 85vh;
+}
+.fit-width-horizontal-double {
+    max-width: 49%;
+    max-height: 85vh;
 }
 </style>
