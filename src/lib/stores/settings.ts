@@ -1,5 +1,4 @@
 import { writable } from 'svelte/store';
 
-// 'vertical' هو الوضع الافتراضي (التمرير العمودي)
-// 'horizontal' هو الوضع الجديد (صفحة بصفحة)
+// الوضع الافتراضي هو 'vertical' (عمودي)
 export const readingMode = writable('vertical');
