@@ -1,21 +1,21 @@
-import { pb } from '$lib/pocketbase'; // نستدعي اتصالنا من الملف المركزي
+import { pb } from '$lib/pocketbase';
 import type { PageServerLoad } from './$types';
 
-// هذه الدالة السحرية تعمل دائمًا قبل تحميل الصفحة
-export const load: PageServerLoad = async () => {
-	// اذهب إلى صندوق 'mangas' وأحضر لي كل السجلات
-	const records = await pb.collection('mangas').getFullList({
-		sort: '-created' // رتبها من الأحدث إلى الأقدم
-	});
+export const load: PageServerLoad = async ({ url }) => {
+    const searchTerm = url.searchParams.get('q') || '';
 
-    // PocketBase يعطينا اسم الملف فقط، نحتاج لبناء الرابط الكامل للصورة
-    records.forEach(record => {
-        record.cover_image_url = pb.getFileUrl(record, record.cover_image);
+    const records = await pb.collection('mangas').getFullList({
+        sort: '-created',
+        filter: `title ~ "${searchTerm}"`
     });
 
+    // 🔽 تم تصحيح الدالة هنا 🔽
+    records.forEach(record => {
+        record.cover_image_url = pb.files.getURL(record, record.cover_image);
+    });
 
-	// أرسل البيانات التي أحضرتها إلى الصفحة لكي تعرضها
-	return {
-		mangas: records
-	};
+    return {
+        mangas: records,
+        searchTerm: searchTerm || ''
+    };
 };

@@ -1,5 +1,6 @@
 <script lang="ts">
     import type { PageData } from './$types';
+    import MangaCard from '$lib/components/MangaCard.svelte'; // استدعاء المكون
     export let data: PageData;
 </script>
 
@@ -16,10 +17,9 @@
 
         <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
             {#each data.favorites as fav (fav.id)}
-                <a href="/manga/{fav.expand.manga.slug}" class="bg-gray-800 rounded-lg overflow-hidden shadow-lg transform hover:-translate-y-1 transition-transform">
-                    <img src={fav.expand.manga.cover_image_url} alt="غلاف {fav.expand.manga.title}" class="w-full h-64 object-cover"/>
-                    <h3 class="p-3 font-bold text-center">{fav.expand.manga.title}</h3>
-                </a>
+                {#if fav.expand?.manga}
+    <MangaCard manga={fav.expand.manga} />
+{/if}
             {:else}
                 <p class="col-span-full text-center text-gray-400">قائمتك فارغة. ابدأ بإضافة بعض المانجا!</p>
             {/each}
