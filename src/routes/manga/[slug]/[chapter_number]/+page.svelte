@@ -1,7 +1,7 @@
 <svelte:window on:keydown={handleKeydown} />
 <script lang="ts">
 	import type { ActionData, PageData } from './$types';
-	import { readingMode } from '$lib/stores/settings';
+	import { pageDisplayMode, readingMode } from '$lib/stores/settings';
 	import { goto } from '$app/navigation';
 
 	export let data: PageData;
@@ -10,17 +10,17 @@
 	const currentChapter = Number(chapter.chapter_number);
 	let currentPageIndex = 0;
 
-	// ✨ السطر الجديد الخاص بحساب التقدم ✨
 	$: progress = pages.length > 0 ? ((currentPageIndex + 1) / pages.length) * 100 : 0;
 
 	const baseCdnUrl = "https://dragonball-cdn.b-cdn.net";
 
 	function handleKeydown(event: KeyboardEvent) {
 		if ($readingMode === 'horizontal') {
+			const step = $pageDisplayMode === 'double' ? 2 : 1;
 			if (event.key === 'ArrowRight') {
-				currentPageIndex = Math.min(pages.length - 1, currentPageIndex + 1);
+				currentPageIndex = Math.min(pages.length - 1, currentPageIndex + step);
 			} else if (event.key === 'ArrowLeft') {
-				currentPageIndex = Math.max(0, currentPageIndex - 1);
+				currentPageIndex = Math.max(0, currentPageIndex - step);
 			}
 		} else {
 			if (event.key === 'ArrowRight') {
@@ -59,6 +59,29 @@
 				>
 					أفقي
 				</button>
+
+				{#if $readingMode === 'horizontal'}
+					<div class="flex items-center space-x-2 border-l border-gray-600 ml-2 pl-2">
+						<button
+							on:click={() => pageDisplayMode.set('single')}
+							class="px-3 py-1 rounded-md text-sm transition-colors {$pageDisplayMode ===
+							'single'
+								? 'bg-orange-600'
+								: 'bg-gray-700 hover:bg-gray-600'}"
+						>
+							صفحة واحدة
+						</button>
+						<button
+							on:click={() => pageDisplayMode.set('double')}
+							class="px-3 py-1 rounded-md text-sm transition-colors {$pageDisplayMode ===
+							'double'
+								? 'bg-orange-600'
+								: 'bg-gray-700 hover:bg-gray-600'}"
+						>
+							صفحتان
+						</button>
+					</div>
+				{/if}
 			</div>
 			<h1 class="font-bold text-lg text-center hidden md:block">{manga.title} - #{chapter.chapter_number}</h1>
 		</div>
@@ -80,33 +103,53 @@
 					/>
 				{/each}
 			{:else}
+				{@const step = $pageDisplayMode === 'double' ? 2 : 1}
 				<div class="w-full flex flex-col items-center justify-center min-h-[70vh]">
-					<div class="relative w-full md:max-w-4xl flex items-center justify-center">
+					<div class="relative w-full max-w-7xl flex items-center justify-center">
 						<!-- svelte-ignore a11y_consider_explicit_label -->
 						<button
-							on:click={() => (currentPageIndex = Math.max(0, currentPageIndex - 1))}
+							on:click={() => (currentPageIndex = Math.max(0, currentPageIndex - step))}
 							class="absolute left-2 md:-left-12 z-10 p-3 bg-black/50 rounded-full hover:bg-black/80 disabled:opacity-0 transition-opacity"
 							disabled={currentPageIndex === 0}
 							title="الصفحة السابقة"
 						>
 							<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
 						</button>
-						<img
-							src="{baseCdnUrl}/{pages[currentPageIndex].image_path}?width=1200&quality=85"
-							alt="صفحة رقم {pages[currentPageIndex].page_number}"
-							class="max-w-full shadow-md"
-						/>
+
+						<div class="flex justify-center items-start gap-2">
+							<img
+								src="{baseCdnUrl}/{pages[currentPageIndex].image_path}?width=1200&quality=85"
+								alt="صفحة رقم {pages[currentPageIndex].page_number}"
+								class="max-h-[85vh] object-contain shadow-md {($pageDisplayMode === 'single' || !pages[currentPageIndex + 1])
+									? 'max-w-full md:max-w-4xl'
+									: 'max-w-[48%]'}"
+							/>
+							{#if $pageDisplayMode === 'double' && pages[currentPageIndex + 1]}
+								<img
+									src="{baseCdnUrl}/{pages[currentPageIndex + 1].image_path}?width=1200&quality=85"
+									alt="صفحة رقم {pages[currentPageIndex + 1].page_number}"
+									class="max-w-[48%] max-h-[85vh] object-contain shadow-md"
+								/>
+							{/if}
+						</div>
+
 						<!-- svelte-ignore a11y_consider_explicit_label -->
 						<button
-							on:click={() => (currentPageIndex = Math.min(pages.length - 1, currentPageIndex + 1))}
+							on:click={() => (currentPageIndex = Math.min(pages.length - 1, currentPageIndex + step))}
 							class="absolute right-2 md:-right-12 z-10 p-3 bg-black/50 rounded-full hover:bg-black/80 disabled:opacity-0 transition-opacity"
-							disabled={currentPageIndex === pages.length - 1}
+							disabled={currentPageIndex >= pages.length - step}
 							title="الصفحة التالية"
 						>
 							<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
 						</button>
 					</div>
-					<p class="mt-4 text-gray-400">صفحة {currentPageIndex + 1} من {pages.length}</p>
+					<p class="mt-4 text-gray-400">
+						{#if $pageDisplayMode === 'double' && pages[currentPageIndex + 1]}
+							صفحة {currentPageIndex + 1}-{currentPageIndex + 2} من {pages.length}
+						{:else}
+							صفحة {currentPageIndex + 1} من {pages.length}
+						{/if}
+					</p>
 				</div>
 			{/if}
 		{:else}
