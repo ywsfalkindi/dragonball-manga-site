@@ -1,3 +1,4 @@
+// src/routes/signup/+page.server.ts
 import { pb } from '$lib/pocketbase';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions } from './$types';
@@ -14,6 +15,10 @@ export const actions: Actions = {
 			return fail(400, { error: 'يجب أن تتكون كلمة المرور من 8 أحرف على الأقل.' });
 		}
 
+		if (password !== passwordConfirm) {
+			return fail(400, { error: 'كلمتا المرور غير متطابقتين.' });
+		}
+
 		try {
 			await pb.collection('users').create({
 				username,
@@ -23,18 +28,34 @@ export const actions: Actions = {
 				emailVisibility: true
 			});
 		} catch (err: any) {
-			console.error('Error creating user:', err);
+			// **التحسين: تسجيل الخطأ الكامل للمساعدة في التشخيص**
+			console.error('Full PocketBase Error Object:', JSON.stringify(err, null, 2));
 
-			if (err.data?.data?.email?.code === 'validation_invalid_email') {
-				return fail(400, { error: 'صيغة البريد الإلكتروني غير صحيحة.' });
+			const validationErrors = err.data?.data;
+
+			if (validationErrors) {
+				if (validationErrors.username?.code === 'validation_invalid_username') {
+					return fail(400, {
+						error: 'اسم المستخدم غير صالح. لا يجب أن يحتوي على مسافات أو رموز خاصة.'
+					});
+				}
+				if (validationErrors.passwordConfirm?.code === 'validation_values_not_equal') {
+					return fail(400, { error: 'كلمتا المرور غير متطابقتين.' });
+				}
+				if (validationErrors.email?.code === 'validation_invalid_email') {
+					return fail(400, { error: 'صيغة البريد الإلكتروني غير صحيحة.' });
+				}
+				if (validationErrors.username?.code === 'validation_not_unique') {
+					return fail(400, { error: 'اسم المستخدم هذا محجوز بالفعل.' });
+				}
+				if (validationErrors.password?.code === 'validation_length_too_short') {
+					return fail(400, { error: 'كلمة المرور قصيرة جدًا.' });
+				}
 			}
-			if (err.data?.data?.username?.code === 'validation_not_unique') {
-				return fail(400, { error: 'اسم المستخدم هذا محجوز بالفعل.' });
-			}
-			if (err.data?.data?.password?.code === 'validation_length_too_short') {
-				return fail(400, { error: 'كلمة المرور قصيرة جدًا.' });
-			}
-			return fail(500, { error: 'فشل إنشاء الحساب. تأكد من أن البريد الإلكتروني أو اسم المستخدم غير مستخدمين.' });
+
+			return fail(500, {
+				error: 'فشل إنشاء الحساب. يرجى مراجعة إعدادات قاعدة البيانات (Create Rule).'
+			});
 		}
 
 		throw redirect(303, '/login?registered=true');

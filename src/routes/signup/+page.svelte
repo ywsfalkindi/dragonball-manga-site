@@ -3,6 +3,18 @@
 	export let form: ActionData;
 
 	let password = '';
+	let passwordConfirm = ''; // <-- تمت إضافة متغير لتأكيد كلمة المرور
+	let clientError: string | null = null; // <-- متغير لعرض خطأ الواجهة الأمامية
+
+	// <-- منطق التحقق الفوري من تطابق كلمتي المرور
+	$: {
+		if (passwordConfirm && password !== passwordConfirm) {
+			clientError = 'كلمتا المرور غير متطابقتين.';
+		} else {
+			clientError = null;
+		}
+	}
+
 	let passwordStrength = {
 		score: 0,
 		text: '',
@@ -106,16 +118,21 @@
 					name="passwordConfirm"
 					id="passwordConfirm"
 					class="w-full bg-gray-700 text-white rounded p-2 border border-gray-600 focus:outline-none focus:border-orange-500"
+					bind:value={passwordConfirm}
 					required
 				/>
 			</div>
 
-			{#if form?.error}
+			{#if clientError}
+				<p class="text-yellow-400 text-center mb-4">{clientError}</p>
+			{:else if form?.error}
 				<p class="text-red-500 text-center mb-4">{form.error}</p>
 			{/if}
+			
 			<button
 				type="submit"
-				class="w-full bg-orange-600 text-white font-bold py-2 px-4 rounded hover:bg-orange-700 transition-colors"
+				class="w-full bg-orange-600 text-white font-bold py-2 px-4 rounded hover:bg-orange-700 transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed"
+				disabled={clientError !== null}
 			>
 				إنشاء الحساب
 			</button>
