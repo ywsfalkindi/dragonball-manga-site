@@ -16,12 +16,8 @@
 
 	let showSettings = false;
 	let showThumbnails = false;
-
-	// المتغيرات الجديدة للتحكم في الواجهة
 	let uiVisible = true;
 	let inactivityTimer: number;
-
-	// دوال التحكم في إظهار وإخفاء الواجهة
 	function hideUI() {
 		if (showSettings || showThumbnails) return;
 		uiVisible = false;
@@ -30,7 +26,7 @@
 	function resetTimer() {
 		uiVisible = true;
 		clearTimeout(inactivityTimer);
-		inactivityTimer = setTimeout(hideUI, 3000); // إخفاء الواجهة بعد 3 ثوانٍ
+		inactivityTimer = setTimeout(hideUI, 3000);
 	}
 	
 	let lastScrollY = 0;
@@ -52,7 +48,6 @@
 			clearTimeout(inactivityTimer);
 		};
 	});
-
 	onDestroy(() => {
 		clearTimeout(inactivityTimer);
 	});
@@ -236,6 +231,8 @@
 			{/each}
 		</div>
 	</div>
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<div class="fixed inset-0 z-20 bg-black/30" on:click={() => showThumbnails = false}></div>
 	{/if}
 
@@ -334,7 +331,7 @@
         {#if user}
             <form method="POST" action="?/addComment" class="mb-8">
                 <div class="bg-gray-800 rounded-lg p-4">
-                   <textarea 
+                    <textarea 
                         name="content" 
                         rows="4" 
                         placeholder="أضف تعليقك هنا..."
@@ -346,25 +343,25 @@
                     {/if}
                     <button type="submit" class="mt-4 bg-orange-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-orange-700">
                         إرسال التعليق
-                     </button>
+                    </button>
                 </div>
             </form>
         {:else}
             <div class="mb-8 text-center bg-gray-800 p-6 rounded-lg">
                 <p><a href="/login" class="text-orange-500 hover:underline font-bold">سجل دخولك</a> لتتمكن من إضافة تعليق.</p>
-           </div>
+            </div>
         {/if}
         <div class="space-y-6">
             {#each comments as comment}
                 <article class="flex space-x-4">
                     {#if comment.expand?.user}
                         <div class="flex-shrink-0">
-                           <div class="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center font-bold text-white">
-                                {comment.expand.user.email.charAt(0).toUpperCase()}
+                            <div class="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center font-bold text-white">
+                                {comment.expand.user.username.charAt(0).toUpperCase()}
                             </div>
-                         </div>
+                        </div>
                         <div class="bg-gray-800 rounded-lg p-4 flex-grow">
-                            <p class="font-bold text-orange-400">{comment.expand.user.email}</p>
+                            <p class="font-bold text-orange-400">{comment.expand.user.username}</p>
                             <div class="prose prose-invert text-gray-300 mt-2">
                                 {@html comment.content}
                             </div>

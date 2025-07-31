@@ -2,7 +2,7 @@
     import type { LayoutData } from './$types';
     import "../app.css";
     import { navigating } from '$app/stores';
-	export let data: LayoutData;
+    export let data: LayoutData;
 </script>
 
 {#if $navigating}
@@ -20,7 +20,7 @@
             <div class="text-sm">
                 {#if data.user}
                     <div class="flex items-center gap-x-4">
-                        <span class="hidden sm:inline">أهلاً بك، {data.user.email}</span>
+                        <span class="hidden sm:inline">أهلاً بك، {data.user.username}</span>
                         <a href="/profile" class="py-2 px-4 bg-orange-600 rounded hover:bg-orange-700 whitespace-nowrap">ملفي الشخصي</a>
                     </div>
                 {:else}
