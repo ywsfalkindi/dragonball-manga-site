@@ -34,6 +34,18 @@ export const actions: Actions = {
 			const validationErrors = err.data?.data;
 
 			if (validationErrors) {
+				// --- بداية التعديل ---
+				// تم دمج التحقق من وجود المستخدم أو الإيميل في رسالة واحدة عامة لزيادة الأمان
+				if (
+					validationErrors.username?.code === 'validation_not_unique' ||
+					validationErrors.email?.code === 'validation_not_unique'
+				) {
+					return fail(400, {
+						error: 'اسم المستخدم أو البريد الإلكتروني مسجل بالفعل.'
+					});
+				}
+				// --- نهاية التعديل ---
+
 				if (validationErrors.username?.code === 'validation_invalid_username') {
 					return fail(400, {
 						error: 'اسم المستخدم غير صالح. لا يجب أن يحتوي على مسافات أو رموز خاصة.'
@@ -44,9 +56,6 @@ export const actions: Actions = {
 				}
 				if (validationErrors.email?.code === 'validation_invalid_email') {
 					return fail(400, { error: 'صيغة البريد الإلكتروني غير صحيحة.' });
-				}
-				if (validationErrors.username?.code === 'validation_not_unique') {
-					return fail(400, { error: 'اسم المستخدم هذا محجوز بالفعل.' });
 				}
 				if (validationErrors.password?.code === 'validation_length_too_short') {
 					return fail(400, { error: 'كلمة المرور قصيرة جدًا.' });
