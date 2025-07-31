@@ -1,6 +1,7 @@
 import { pb } from '$lib/pocketbase';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
+import { ADMIN_EMAIL, ADMIN_PASSWORD } from '$env/static/private'; // <-- التغيير: استيراد من البيئة
 
 export const load: PageServerLoad = async () => {
 	const mangas = await pb.collection('mangas').getFullList({ sort: 'title' });
@@ -20,7 +21,8 @@ export const actions: Actions = {
 
 		try {
 			// تسجيل الدخول ببيانات المدير
-			await pb.admins.authWithPassword("yousifalkindi789@gmail.com", "Y_mtc@12345");
+			// <-- التغيير: استخدام المتغيرات الآمنة
+			await pb.admins.authWithPassword(ADMIN_EMAIL, ADMIN_PASSWORD);
 
 			// جلب الـ slug الخاص بالمانجا المختارة
 			const manga = await pb.collection('mangas').getOne(mangaId);
