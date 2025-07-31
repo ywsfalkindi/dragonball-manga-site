@@ -1,6 +1,16 @@
+// src/routes/manga/[slug]/[chapter_number]/+page.server.ts
 import { pb } from '$lib/pocketbase';
 import { error, fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
+
+// ✨ --- بداية الإضافة --- ✨
+import DOMPurify from 'dompurify';
+import { JSDOM } from 'jsdom';
+
+// نقوم بتهيئة DOMPurify ليعمل في بيئة الخادم
+const window = new JSDOM('').window;
+const purify = DOMPurify(window);
+// ✨ --- نهاية الإضافة --- ✨
 
 export const load: PageServerLoad = async ({ locals, params }) => {
 	try {
@@ -42,18 +52,21 @@ export const actions: Actions = {
 		}
 
 		const data = await request.formData();
-		const content = data.get('content') as string;
+		const rawContent = data.get('content') as string;
 
-		if (!content || content.trim().length === 0) {
+		if (!rawContent || rawContent.trim().length === 0) {
 			return fail(400, { error: 'لا يمكن أن يكون التعليق فارغًا.' });
 		}
 		
+        // ✨ التغيير الأهم: تنقية المحتوى ✨
+        const content = purify.sanitize(rawContent);
+        
 		const manga = await pb.collection('mangas').getFirstListItem(`slug = "${params.slug}"`);
 		const chapter = await pb.collection('chapters').getFirstListItem(`manga.id = "${manga.id}" && chapter_number = ${params.chapter_number}`);
 
 		try {
 			await pb.collection('comments').create({
-				content,
+				content, // <-- استخدام المحتوى المنقّى
 				user: locals.user.id,
 				chapter: chapter.id
 			});

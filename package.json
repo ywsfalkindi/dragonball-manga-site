@@ -14,6 +14,8 @@
 		"lint": "prettier --check . && eslint ."
 	},
 	"devDependencies": {
+		"@types/dompurify": "^3.0.5",
+		"@types/jsdom": "^21.1.7",
 		"@eslint/compat": "^1.2.5",
 		"@eslint/js": "^9.18.0",
 		"@sveltejs/adapter-auto": "^6.0.0",
@@ -31,6 +33,7 @@
 		"prettier-plugin-svelte": "^3.3.3",
 		"prettier-plugin-tailwindcss": "^0.6.11",
 		"svelte": "^5.0.0",
+
 		"svelte-check": "^4.0.0",
 		"tailwindcss": "^4.0.0",
 		"typescript": "^5.0.0",
@@ -38,6 +41,8 @@
 		"vite": "^7.0.4"
 	},
 	"dependencies": {
+		"dompurify": "^3.1.5",
+		"jsdom": "^24.1.0",
 		"pocketbase": "^0.26.2"
 	}
 }
