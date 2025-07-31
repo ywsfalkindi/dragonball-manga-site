@@ -15,7 +15,7 @@
 	let currentPageIndex = 0;
 	$: progress = pages.length > 0 ? ((currentPageIndex + 1) / pages.length) * 100 : 0;
 	let imagesToPreload: string[] = [];
-	const PRELOAD_AHEAD_COUNT = 3;
+	const PRELOAD_AHEAD_COUNT = 7;
 
 	let showSettings = false;
 	let showThumbnails = false;
@@ -39,6 +39,7 @@
         // ✨ -- إضافة شرط التحقق -- ✨
 		if (browser) {
 			if (window.scrollY < lastScrollY) {
+				uiVisible = true;
 				resetTimer();
 			}
 			lastScrollY = window.scrollY;
@@ -59,7 +60,7 @@
 		if ($readingMode === 'vertical' && imageElements.length > 1) {
 			const options = {
 				root: null, // يراقب بالنسبة لنافذة العرض
-				rootMargin: '500px 0px', // ابدأ التحميل عندما تكون الصورة على بعد 500 بكسل
+				rootMargin: '1500px 0px', // ابدأ التحميل عندما تكون الصورة على بعد 500 بكسل
 				threshold: 0.01
 			};
 
