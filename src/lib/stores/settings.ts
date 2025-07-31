@@ -1,11 +1,16 @@
-import { writable } from 'svelte/store';
+// src/lib/stores/settings.ts
+
+import { persisted } from 'svelte-persisted-store';
 
 // الوضع الافتراضي هو 'vertical' (عمودي)
-export const readingMode = writable('vertical');
-export const pageDisplayMode = writable('single'); // الخيارات: 'single' أو 'double'
+export const readingMode = persisted('readingMode', 'vertical');
+
+// الخيارات: 'single' أو 'double'
+export const pageDisplayMode = persisted('pageDisplayMode', 'single'); 
 
 // ✨ إضافات جديدة ✨
-// الخيارات: 'black', 'white', 'sepia'
-export const readerBackgroundColor = writable('black'); 
+// الخيارات: 'black', 'white', '#f4e8d8'
+export const readerBackgroundColor = persisted('readerBackgroundColor', 'black'); 
+
 // الخيارات: 'fit-width', 'fit-height', 'original'
-export const imageFitMode = writable('fit-width');
+export const imageFitMode = persisted('imageFitMode', 'fit-width');
