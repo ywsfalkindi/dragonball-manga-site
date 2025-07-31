@@ -6,6 +6,10 @@
 	import { onMount, onDestroy } from 'svelte';
     // ✨ ---  بداية الإضافة: استيراد للتحقق من بيئة التشغيل --- ✨
     import { browser } from '$app/environment';
+	// --- بداية التعديل: استيراد المتغير من بيئة العمل ---
+    import { PUBLIC_CDN_URL } from '$env/static/public';
+    // --- نهاية التعديل ---
+	
 
 	export let data: PageData;
 	// svelte-ignore export_let_unused
@@ -106,7 +110,10 @@
 		}
 	}
 
-	const baseCdnUrl = 'https://dragonball-cdn.b-cdn.net';
+	// --- بداية التعديل: استخدام المتغير بدلاً من النص الثابت ---
+	const baseCdnUrl = PUBLIC_CDN_URL;
+    // --- نهاية التعديل ---
+	
 	// صورة شفافة مؤقتة للتحميل الكسول
 	const placeholderSrc =
 		'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';

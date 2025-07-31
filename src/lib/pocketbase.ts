@@ -1,3 +1,7 @@
+// src/lib/pocketbase.ts
 import PocketBase from 'pocketbase';
+// --- التعديل: استيراد المتغير من بيئة العمل ---
+import { PUBLIC_POCKETBASE_URL } from '$env/static/public';
 
-export const pb = new PocketBase('http://127.0.0.1:8090');
+// --- التعديل: استخدام المتغير هنا ---
+export const pb = new PocketBase(PUBLIC_POCKETBASE_URL);
