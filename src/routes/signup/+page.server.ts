@@ -4,7 +4,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import type { Actions } from './$types';
 
 export const actions: Actions = {
-	default: async ({ request }) => {
+	default: async ({ request, cookies }) => { // <-- إضافة cookies هنا
 		const data = await request.formData();
 		const username = data.get('username') as string;
 		const email = data.get('email') as string;
@@ -28,14 +28,9 @@ export const actions: Actions = {
 				emailVisibility: true
 			});
 		} catch (err: any) {
-			// **التحسين: تسجيل الخطأ الكامل للمساعدة في التشخيص**
 			console.error('Full PocketBase Error Object:', JSON.stringify(err, null, 2));
-
 			const validationErrors = err.data?.data;
-
 			if (validationErrors) {
-				// --- بداية التعديل ---
-				// تم دمج التحقق من وجود المستخدم أو الإيميل في رسالة واحدة عامة لزيادة الأمان
 				if (
 					validationErrors.username?.code === 'validation_not_unique' ||
 					validationErrors.email?.code === 'validation_not_unique'
@@ -44,8 +39,7 @@ export const actions: Actions = {
 						error: 'اسم المستخدم أو البريد الإلكتروني مسجل بالفعل.'
 					});
 				}
-				// --- نهاية التعديل ---
-
+				// ... (بقية معالجة الأخطاء تبقى كما هي)
 				if (validationErrors.username?.code === 'validation_invalid_username') {
 					return fail(400, {
 						error: 'اسم المستخدم غير صالح. لا يجب أن يحتوي على مسافات أو رموز خاصة.'
@@ -61,12 +55,27 @@ export const actions: Actions = {
 					return fail(400, { error: 'كلمة المرور قصيرة جدًا.' });
 				}
 			}
-
 			return fail(500, {
 				error: 'فشل إنشاء الحساب. يرجى مراجعة إعدادات قاعدة البيانات (Create Rule).'
 			});
 		}
 
-		throw redirect(303, '/login?registered=true');
+		// --- بداية التحسين: تسجيل الدخول التلقائي ---
+		try {
+			// نحاول تسجيل دخول المستخدم الجديد بنفس البيانات التي أدخلها
+			await pb.collection('users').authWithPassword(email, password);
+			
+			// إذا نجح، نقوم بتعيين الكوكيز تمامًا كما نفعل في صفحة تسجيل الدخول
+			cookies.set('pb_auth', pb.authStore.exportToCookie(), { path: '/' });
+
+		} catch (authError) {
+			console.error('Auto-login failed after signup:', authError);
+			// إذا فشل تسجيل الدخول لسبب غير متوقع، نوجهه لصفحة الدخول كخطة بديلة
+			throw redirect(303, '/login?registered=true');
+		}
+
+		// نوجه المستخدم إلى صفحته الشخصية مباشرة بدلاً من صفحة الدخول
+		throw redirect(303, '/profile');
+		// --- نهاية التحسين ---
 	}
 };
