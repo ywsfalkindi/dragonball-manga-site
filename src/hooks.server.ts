@@ -24,7 +24,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 
             // --- بداية منطق كرة التنين ---
             // فرصة 2% لظهور الكرة في أي صفحة
-            if (Math.random() < 0.02 && event.locals.user) { 
+            if (Math.random() < 1.0 && event.locals.user) { 
                 let userBallsRecord;
                 try {
                     // 1. جلب الكرات التي جمعها المستخدم
