@@ -2,6 +2,8 @@
     import type { LayoutData } from './$types';
     import "../app.css";
     import { navigating } from '$app/stores';
+    import DragonBall from '$lib/components/DragonBall.svelte';
+
     export let data: LayoutData;
 </script>
 
@@ -9,6 +11,10 @@
     <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
         <div class="w-16 h-16 border-4 border-t-orange-500 border-gray-600 rounded-full animate-spin"></div>
     </div>
+{/if}
+
+{#if data.dragonBall}
+    <DragonBall ball_number={data.dragonBall.ball_number} find_token={data.dragonBall.find_token} />
 {/if}
 
 <div class="min-h-screen bg-gray-900 text-white font-[Tajawal]">
