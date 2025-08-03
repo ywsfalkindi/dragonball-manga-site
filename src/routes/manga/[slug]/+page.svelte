@@ -26,7 +26,7 @@
 					<form method="POST" action="?/{isFavorited ? 'unfavorite' : 'favorite'}">
 						<button
 							type="submit"
-							class="bg-orange-600 text-white font-bold py-2 px-6 rounded-lg transition-colors hover:bg-orange-500"
+							class="bg-orange-600 text-white font-bold py-2 px-6 rounded-lg transition-colors hover:bg-orange-500 flex items-center gap-2"
 						>
 							<span>{isFavorited ? '❤️' : '🤍'}</span>
 							<span>{isFavorited ? 'إزالة من المفضلة' : 'إضافة إلى المفضلة'}</span>
@@ -50,22 +50,21 @@
 		<div class="bg-gray-800 rounded-lg shadow-lg">
 			<ul class="divide-y divide-gray-700">
 				{#each chapters as chapter (chapter.id)}
-					<li>
+					<li class={lastReadChapter?.id === chapter.id ? 'bg-blue-900/30' : ''}>
 						<a
 							href="/manga/{manga.slug}/{chapter.chapter_number}"
-							class="block p-6 hover:bg-gray-700/50 transition-colors duration-200 items-center justify-between"
+							class="p-4 hover:bg-gray-700/50 transition-colors duration-200 flex items-center justify-between"
 						>
-							<div class="flex items-center">
+							<div class="flex items-center space-x-3 rtl:space-x-reverse">
 								<span class="text-xl font-semibold">الفصل #{chapter.chapter_number}</span>
 								{#if readChapterIds.has(chapter.id)}
-									<span class="ml-3 text-xs bg-blue-500 text-white py-1 px-2 rounded-full"
-										>مقروء</span
-									>
+									<span class="text-xs bg-blue-500 text-white py-1 px-2 rounded-full">مقروء</span>
+								{/if}
+								{#if lastReadChapter?.id === chapter.id}
+									<span class="text-xs bg-green-500 text-white py-1 px-2 rounded-full">آخر قراءة</span>
 								{/if}
 							</div>
-							<span class="bg-orange-500 text-white text-sm font-bold py-1 px-3 rounded-full"
-								>اقرأ الآن</span
-							>
+							<span class="bg-orange-500 text-white text-sm font-bold py-1 px-3 rounded-full hidden sm:inline-block">اقرأ الآن</span>
 						</a>
 					</li>
 				{:else}
@@ -75,19 +74,14 @@
 			<div class="flex justify-center items-center space-x-4 mt-8 pb-6 text-white" dir="ltr">
 				<a
 					href="?page={chaptersResult.page - 1}"
-					class="py-2 px-4 bg-gray-700 rounded {chaptersResult.page === 1
-						? 'opacity-50 pointer-events-none'
-						: 'hover:bg-orange-600'}"
+					class="py-2 px-4 bg-gray-700 rounded {chaptersResult.page === 1 ? 'opacity-50 pointer-events-none' : 'hover:bg-orange-600'}"
 				>
 					&laquo; السابق
 				</a>
 				<span> صفحة {chaptersResult.page} من {chaptersResult.totalPages} </span>
 				<a
 					href="?page={chaptersResult.page + 1}"
-					class="py-2 px-4 bg-gray-700 rounded {chaptersResult.page ===
-					chaptersResult.totalPages
-						? 'opacity-50 pointer-events-none'
-						: 'hover:bg-orange-600'}"
+					class="py-2 px-4 bg-gray-700 rounded {chaptersResult.page === chaptersResult.totalPages ? 'opacity-50 pointer-events-none' : 'hover:bg-orange-600'}"
 				>
 					التالي &raquo;
 				</a>
@@ -95,6 +89,3 @@
 		</div>
 	</main>
 </div>
-<style>
-    /* يمكنك إبقاء الـ style فارغًا أو حذف كود الأنيميشن السابق */
-</style>

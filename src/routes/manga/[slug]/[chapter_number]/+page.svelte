@@ -4,18 +4,15 @@
 	import { pageDisplayMode, readingMode, readerBackgroundColor, imageFitMode } from '$lib/stores/settings';
 	import { goto } from '$app/navigation';
 	import { onMount, onDestroy } from 'svelte';
-    // ✨ ---  بداية الإضافة: استيراد للتحقق من بيئة التشغيل --- ✨
     import { browser } from '$app/environment';
-	// --- بداية التعديل: استيراد المتغير من بيئة العمل ---
     import { PUBLIC_CDN_URL } from '$env/static/public';
-	// --- نهاية التعديل ---
 	
 
 	export let data: PageData;
-	// svelte-ignore export_let_unused
-	export let form: ActionData;
-	const { user, manga, chapter, pages, comments } = data;
-	const currentChapter = Number(chapter.chapter_number);
+// svelte-ignore export_let_unused
+    export let form: ActionData;
+    $: ({ user, manga, chapter, pages, comments, nextChapterExists } = data);
+    $: currentChapter = chapter ? Number(chapter.chapter_number) : 0;
 	let currentPageIndex = 0;
 	$: progress = pages.length > 0 ? ((currentPageIndex + 1) / pages.length) * 100 : 0;
 	let imagesToPreload: string[] = [];
@@ -24,8 +21,15 @@
 	let showSettings = false;
 	let showThumbnails = false;
 	let uiVisible = true;
-    // ✨ -- إصلاح نوع المتغير -- ✨
 	let inactivityTimer: number | NodeJS.Timeout;
+    
+    // ✨ التحسين: إضافة دالة لمعالجة خطأ تحميل الصورة ✨
+    function onImageError(event: Event) {
+        const img = event.target as HTMLImageElement;
+        img.src = '/image_error.png'; // يجب إضافة صورة بديلة في مجلد static
+        img.style.width = '300px'; 
+        img.style.opacity = '0.5';
+    }
 
 	function hideUI() {
 		if (showSettings || showThumbnails) return;
@@ -40,7 +44,6 @@
 
 	let lastScrollY = 0;
 	function handleScroll() {
-        // ✨ -- إضافة شرط التحقق -- ✨
 		if (browser) {
 			if (window.scrollY < lastScrollY) {
 				uiVisible = true;
@@ -50,38 +53,28 @@
 		}
 	}
 
-    // 🚀 --- بداية التحسين: دالة الانتقال عبر شريط التقدم --- 🚀
     function handleProgressClick(event: MouseEvent) {
         const target = event.currentTarget as HTMLDivElement;
         const rect = target.getBoundingClientRect();
-        const x = event.clientX - rect.left; // موقع الضغطة بالنسبة لبداية الشريط
+        const x = event.clientX - rect.left;
         const percentage = x / rect.width;
         const pageCount = pages.length;
         
-        // تأكد من أن عدد الصفحات أكبر من صفر لتجنب القسمة على صفر
         if (pageCount === 0) return;
-
-        // حساب الصفحة المستهدفة
         const targetIndex = Math.floor(percentage * pageCount);
-
+        
         if ($readingMode === 'horizontal') {
-            // في الوضع الأفقي، نغير مؤشر الصفحة الحالي
-            // نستخدم Math.min و Math.max لضمان عدم الخروج عن النطاق
             const step = $pageDisplayMode === 'double' ? 2 : 1;
             currentPageIndex = Math.max(0, Math.min(pageCount - step, targetIndex));
         } else {
-            // في الوضع العمودي، ننتقل بالصفحة إلى الصورة المستهدفة
             const pageElement = document.getElementById(`page-${targetIndex}`);
             if (pageElement) {
                 pageElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                // نعيد تفعيل مؤقت إظهار الواجهة عند القفز
                 resetTimer();
             }
         }
     }
-    // 🚀 --- نهاية التحسين --- 🚀
 
-	// --- التحسين: منطق Intersection Observer ---
 	let imageElements: HTMLImageElement[] = [];
 	let observer: IntersectionObserver;
 	onMount(() => {
@@ -91,11 +84,11 @@
 		};
 		document.addEventListener('fullscreenchange', updateFullscreenStatus);
 
-		// إعداد الـ Observer
 		if ($readingMode === 'vertical' && imageElements.length > 1) {
 			const options = {
-				root: null, // يراقب بالنسبة لنافذة العرض
-				rootMargin: '1500px 0px', // ابدأ التحميل عندما تكون الصورة على بعد 500 بكسل
+				root: null, 
+                // ✨ التحسين: تقليل الهامش لتحميل الصور القريبة فقط ✨
+				rootMargin: '500px 0px', 
 				threshold: 0.01
 			};
 
@@ -107,7 +100,7 @@
 						if (src) {
 							img.src = src;
 						}
-						obs.unobserve(img); // توقف عن مراقبة الصورة بعد تحميلها
+						obs.unobserve(img);
 					}
 				});
 			}, options);
@@ -120,7 +113,7 @@
 		return () => {
 			document.removeEventListener('fullscreenchange', updateFullscreenStatus);
 			clearTimeout(inactivityTimer);
-			if (observer) observer.disconnect(); // تنظيف الـ observer عند مغادرة الصفحة
+			if (observer) observer.disconnect();
 		};
 	});
 
@@ -140,17 +133,12 @@
 		}
 	}
 
-	// --- بداية التعديل: استخدام المتغير بدلاً من النص الثابت ---
 	const baseCdnUrl = PUBLIC_CDN_URL;
-	// --- نهاية التعديل ---
-	
-	// صورة شفافة مؤقتة للتحميل الكسول
 	const placeholderSrc =
 		'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 
 	let isFullscreen = false;
 	function toggleFullscreen() {
-        // ✨ -- إضافة شرط التحقق -- ✨
 		if (browser) {
 			if (!document.fullscreenElement) {
 				document.documentElement.requestFullscreen();
@@ -176,7 +164,7 @@
 				currentPageIndex = Math.max(0, currentPageIndex - step);
 			}
 		} else {
-			if (event.key === 'ArrowRight') {
+			if (event.key === 'ArrowRight' && nextChapterExists) {
 				goto(`/manga/${manga.slug}/${currentChapter + 1}`);
 			} else if (event.key === 'ArrowLeft') {
 				goto(`/manga/${manga.slug}/${currentChapter - 1}`);
@@ -290,7 +278,6 @@
 								<!-- svelte-ignore a11y_consider_explicit_label -->
 								<button on:click={() => readerBackgroundColor.set('black')} class:ring-orange-500={$readerBackgroundColor === 'black'} class="h-8 w-8 rounded-full border border-gray-600 bg-black ring-2 ring-transparent"></button>
 								<!-- svelte-ignore a11y_consider_explicit_label -->
-								<!-- svelte-ignore a11y_consider_explicit_label -->
 								<button on:click={() => readerBackgroundColor.set('white')} class:ring-orange-500={$readerBackgroundColor === 'white'} class="h-8 w-8 rounded-full border border-gray-400 bg-white ring-2 ring-transparent"></button>
 								<!-- svelte-ignore a11y_consider_explicit_label -->
 								<button on:click={() => readerBackgroundColor.set('#f4e8d8')} class:ring-orange-500={$readerBackgroundColor === '#f4e8d8'} class="h-8 w-8 rounded-full border border-gray-400 bg-[#f4e8d8] ring-2 ring-transparent"></button>
@@ -343,6 +330,7 @@
 							alt="صفحة {i + 1}"
 							class="h-auto w-full"
 							loading="lazy"
+                            on:error={onImageError}
 						/>
 						<div class="absolute inset-0 flex items-center justify-center bg-black/50 font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">
 							{i + 1}
@@ -371,6 +359,7 @@
 						class:fit-height={$imageFitMode === 'fit-height'}
 						class:original-size={$imageFitMode === 'original'}
 						loading="lazy"
+                        on:error={onImageError}
 					/>
 				{/each}
 			{:else}
@@ -398,6 +387,7 @@
 								class:fit-width-horizontal-double={$pageDisplayMode === 'double' && pages[currentPageIndex + 1] && $imageFitMode !== 'fit-height'}
 								class:fit-height={$imageFitMode === 'fit-height'}
 								class:original-size={$imageFitMode === 'original'}
+                                on:error={onImageError}
 							/>
 							{#if $pageDisplayMode === 'double' && pages[currentPageIndex + 1]}
 								<img
@@ -407,6 +397,7 @@
 									class:fit-width-horizontal-double={$imageFitMode !== 'fit-height'}
 									class:fit-height={$imageFitMode === 'fit-height'}
 									class:original-size={$imageFitMode === 'original'}
+                                    on:error={onImageError}
 								/>
 							{/if}
 						</div>
@@ -436,18 +427,22 @@
 		{/if}
 	</main>
 	<footer
-		class="reader-footer container mx-auto flex items-center justify-between px-4 py-6 text-white"
-		class:footer-hidden={!uiVisible}
-	>
-		<a
-			href="/manga/{manga.slug}/{currentChapter - 1}"
-			class="rounded bg-orange-600 px-6 py-2 transition-colors hover:bg-orange-700 {currentChapter <= 1 ? 'pointer-events-none opacity-50' : ''}">الفصل السابق</a
-		>
-		<a
-			href="/manga/{manga.slug}/{currentChapter + 1}"
-			class="rounded bg-orange-600 px-6 py-2 transition-colors hover:bg-orange-700">الفصل التالي</a
-		>
-	</footer>
+    class="reader-footer container mx-auto flex items-center justify-between px-4 py-6 text-white z-20"
+    class:footer-hidden={!uiVisible}
+>
+    <a
+        href="/manga/{manga.slug}/{currentChapter - 1}"
+        class="rounded bg-orange-600 px-6 py-2 transition-colors hover:bg-orange-700 {currentChapter <= 1 ? 'pointer-events-none opacity-50' : ''}"
+    >الفصل السابق</a>
+    
+    <a
+        href="/manga/{manga.slug}/{currentChapter + 1}"
+        class="rounded bg-orange-600 px-6 py-2 transition-colors hover:bg-orange-700"
+        class:pointer-events-none={!nextChapterExists}
+        class:opacity-50={!nextChapterExists}
+        aria-disabled={!nextChapterExists}
+    >الفصل التالي</a>
+</footer>
 	<section class="container mx-auto px-4 py-10">
 		<h2 class="mb-6 border-b-2 border-gray-700 pb-2 text-3xl font-bold text-white">
 			التعليقات ({comments.length})

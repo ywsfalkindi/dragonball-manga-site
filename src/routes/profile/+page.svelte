@@ -3,22 +3,34 @@
 	import MangaCard from '$lib/components/MangaCard.svelte';
 	import { collectedBallsStore } from '$lib/stores/dragonballs';
 	import { fly } from 'svelte/transition';
+    import { onMount } from 'svelte';
 
 	export let data: PageData;
 	export let form: ActionData;
 
 	collectedBallsStore.set(data.collectedBalls || []);
-
 	let showSummoningScene = false;
 	let animationStep = 0; // 0: start, 1: balls gather, 2.5: shake, 2: flash, 3: shenron appears, 4: wishes appear
 	let selectedWishes: any[] = [];
 	let finalMessage = '';
+    
+    // ✨ التحسين: استخدام onMount لإدارة الرسائل بعد التحميل الكامل للصفحة ✨
+    let passwordSuccessMessage = '';
+    onMount(() => {
+        if (form?.passwordSuccess) {
+            passwordSuccessMessage = form.passwordSuccess;
+            setTimeout(() => {
+                passwordSuccessMessage = '';
+            }, 3000);
+        }
+    })
 
 	$: if (form) {
-		if (form.wishes) {
-			showSummoningScene = true;
+		if (form.wishes && !showSummoningScene) {
 			selectedWishes = form.wishes;
-			startAnimationSequence();
+			showSummoningScene = true;
+            // ✨ التحسين: بدء تسلسل التحريك عند عرض المشهد ✨
+			animationStep = 1; 
 		} else if (form.shenronWished) {
 			finalMessage = form.message || 'تحققت أمنيتك!';
 			collectedBallsStore.set([]);
@@ -29,21 +41,23 @@
 			}, 5000);
 		}
 	}
-
-	function startAnimationSequence() {
-		animationStep = 0;
-		setTimeout(() => (animationStep = 1), 500);
-		setTimeout(() => (animationStep = 2.5), 2300); // Shake step
-		setTimeout(() => (animationStep = 2), 2500);
-		setTimeout(() => (animationStep = 3), 3000);
-		setTimeout(() => (animationStep = 4), 4000);
-	}
+    
+    // ✨ التحسين: استخدام on:animationend لتسلسل الحركات ✨
+    function handleAnimationEnd(event: AnimationEvent) {
+        if (event.animationName === 'circle-in') {
+            animationStep = 2.5; // Trigger shake
+        } else if (event.animationName === 'screen-shake') {
+            animationStep = 2; // Trigger flash
+        } else if (event.animationName === 'flash-effect') {
+             animationStep = 3; // Trigger Shenron
+        }
+    }
 </script>
 
 <svelte:head><title>ملفي الشخصي - {data.user?.username}</title></svelte:head>
 
 {#if showSummoningScene}
-	<div class="summoning-overlay" class:shake={animationStep === 2.5}>
+	<div class="summoning-overlay" class:shake={animationStep === 2.5} on:animationend={handleAnimationEnd}>
 		<div class="lightning" style="--delay: 0.1s; --duration: 0.3s;"></div>
 		<div class="lightning" style="--delay: 0.5s; --duration: 0.2s; left: 20%; top: 0;"></div>
 		<div class="lightning" style="--delay: 0.8s; --duration: 0.4s; left: 80%; top: 20%;"></div>
@@ -67,11 +81,11 @@
 		{/if}
 
 		{#if animationStep >= 3}
-			<div class="shenron-container" transition:fly={{ y: 200, duration: 1000 }}>
+			<div class="shenron-container" transition:fly={{ y: 200, duration: 1000 }} on:introend={() => animationStep = 4}>
 				<img src="/shenron.png" alt="Shenron" class="shenron-img" />
 
 				{#if animationStep >= 4}
-					<div class="wishes-box">
+					<div class="wishes-box" transition:fly={{ y: 50, duration: 500 }}>
 						{#if finalMessage}
 							<div class="final-message">
 								<p>{finalMessage}</p>
@@ -115,15 +129,44 @@
 			</form>
 		</div>
 
-		<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-			<div class="bg-gray-800 p-6 rounded-lg shadow-lg text-center">
-				<h2 class="text-xl text-gray-400">المانجا المفضلة</h2>
-				<p class="text-5xl font-bold mt-2 text-orange-500">{data.stats.totalFavorites}</p>
-			</div>
-			<div class="bg-gray-800 p-6 rounded-lg shadow-lg text-center">
-				<h2 class="text-xl text-gray-400">الفصول المقروءة</h2>
-				<p class="text-5xl font-bold mt-2 text-orange-500">{data.stats.totalChaptersRead}</p>
-			</div>
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+            <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+                <h2 class="text-2xl font-bold mb-4">إحصائياتي</h2>
+                <div class="flex justify-around items-center">
+                    <div class="text-center">
+                        <h3 class="text-xl text-gray-400">المانجا المفضلة</h3>
+                        <p class="text-5xl font-bold mt-2 text-orange-500">{data.stats.totalFavorites}</p>
+                    </div>
+                    <div class="text-center">
+                        <h3 class="text-xl text-gray-400">الفصول المقروءة</h3>
+                        <p class="text-5xl font-bold mt-2 text-orange-500">{data.stats.totalChaptersRead}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+                <h2 class="text-2xl font-bold mb-4">تغيير كلمة المرور</h2>
+                <form method="POST" action="?/changePassword" class="space-y-4">
+                    <div>
+                        <input type="password" name="oldPassword" placeholder="كلمة المرور القديمة" class="w-full bg-gray-700 text-white rounded p-2 border border-gray-600" required />
+                    </div>
+                    <div>
+                        <input type="password" name="newPassword" placeholder="كلمة المرور الجديدة" class="w-full bg-gray-700 text-white rounded p-2 border-gray-600" required />
+                    </div>
+                    <div>
+                        <input type="password" name="newPasswordConfirm" placeholder="تأكيد كلمة المرور الجديدة" class="w-full bg-gray-700 text-white rounded p-2 border-gray-600" required />
+                    </div>
+                    {#if form?.passwordError}
+                        <p class="text-red-500 text-sm text-center">{form.passwordError}</p>
+                    {/if}
+                     {#if passwordSuccessMessage}
+                        <p class="text-green-500 text-sm text-center">{passwordSuccessMessage}</p>
+                    {/if}
+                    <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded hover:bg-blue-700 transition-colors">
+                        حفظ التغييرات
+                    </button>
+                </form>
+            </div>
 		</div>
 
 		<h2 class="text-3xl font-bold mb-6">كرات التنين</h2>

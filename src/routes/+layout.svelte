@@ -1,10 +1,23 @@
 <script lang="ts">
     import type { LayoutData } from './$types';
     import "../app.css";
-    import { navigating } from '$app/stores';
+    import { navigating, page } from '$app/stores';
     import DragonBall from '$lib/components/DragonBall.svelte';
+    import { onMount } from 'svelte';
+    import { fly } from 'svelte/transition';
 
     export let data: LayoutData;
+    
+    // ✨ التحسين: إظهار رسالة عند تسجيل الخروج ✨
+    let showLogoutToast = false;
+    onMount(() => {
+        if ($page.url.searchParams.get('logout') === 'true') {
+            showLogoutToast = true;
+            setTimeout(() => {
+                showLogoutToast = false;
+            }, 3000);
+        }
+    });
 </script>
 
 {#if $navigating}
@@ -15,6 +28,12 @@
 
 {#if data.dragonBall}
     <DragonBall ball_number={data.dragonBall.ball_number} find_token={data.dragonBall.find_token} />
+{/if}
+
+{#if showLogoutToast}
+<div in:fly={{ y: -20, duration: 300 }} out:fly={{ y: -20, duration: 300 }} class="fixed top-20 right-1/2 translate-x-1/2 z-[9999] bg-green-600 text-white py-2 px-6 rounded-lg shadow-lg">
+    تم تسجيل خروجك بنجاح!
+</div>
 {/if}
 
 <div class="min-h-screen bg-gray-900 text-white font-[Tajawal]">
