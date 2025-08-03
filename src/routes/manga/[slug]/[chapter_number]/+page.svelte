@@ -8,7 +8,7 @@
     import { browser } from '$app/environment';
 	// --- بداية التعديل: استيراد المتغير من بيئة العمل ---
     import { PUBLIC_CDN_URL } from '$env/static/public';
-    // --- نهاية التعديل ---
+	// --- نهاية التعديل ---
 	
 
 	export let data: PageData;
@@ -49,6 +49,37 @@
 			lastScrollY = window.scrollY;
 		}
 	}
+
+    // 🚀 --- بداية التحسين: دالة الانتقال عبر شريط التقدم --- 🚀
+    function handleProgressClick(event: MouseEvent) {
+        const target = event.currentTarget as HTMLDivElement;
+        const rect = target.getBoundingClientRect();
+        const x = event.clientX - rect.left; // موقع الضغطة بالنسبة لبداية الشريط
+        const percentage = x / rect.width;
+        const pageCount = pages.length;
+        
+        // تأكد من أن عدد الصفحات أكبر من صفر لتجنب القسمة على صفر
+        if (pageCount === 0) return;
+
+        // حساب الصفحة المستهدفة
+        const targetIndex = Math.floor(percentage * pageCount);
+
+        if ($readingMode === 'horizontal') {
+            // في الوضع الأفقي، نغير مؤشر الصفحة الحالي
+            // نستخدم Math.min و Math.max لضمان عدم الخروج عن النطاق
+            const step = $pageDisplayMode === 'double' ? 2 : 1;
+            currentPageIndex = Math.max(0, Math.min(pageCount - step, targetIndex));
+        } else {
+            // في الوضع العمودي، ننتقل بالصفحة إلى الصورة المستهدفة
+            const pageElement = document.getElementById(`page-${targetIndex}`);
+            if (pageElement) {
+                pageElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // نعيد تفعيل مؤقت إظهار الواجهة عند القفز
+                resetTimer();
+            }
+        }
+    }
+    // 🚀 --- نهاية التحسين --- 🚀
 
 	// --- التحسين: منطق Intersection Observer ---
 	let imageElements: HTMLImageElement[] = [];
@@ -97,7 +128,6 @@
 		clearTimeout(inactivityTimer);
 		if (observer) observer.disconnect();
 	});
-
 	$: {
 		if ($readingMode === 'horizontal' && pages.length > 0) {
 			const start = currentPageIndex + ($pageDisplayMode === 'double' ? 2 : 1);
@@ -112,7 +142,7 @@
 
 	// --- بداية التعديل: استخدام المتغير بدلاً من النص الثابت ---
 	const baseCdnUrl = PUBLIC_CDN_URL;
-    // --- نهاية التعديل ---
+	// --- نهاية التعديل ---
 	
 	// صورة شفافة مؤقتة للتحميل الكسول
 	const placeholderSrc =
@@ -165,8 +195,8 @@
 	{/each}
 </div>
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
 <!-- svelte-ignore a11y_click_events_have_key_events -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
 	class="reader-container min-h-screen font-[Tajawal]"
 	style="background-color: {$readerBackgroundColor};"
@@ -241,7 +271,6 @@
 				</button>
 
 				<!-- svelte-ignore a11y_consider_explicit_label -->
-				<!-- svelte-ignore a11y_consider_explicit_label -->
 				<button on:click={() => (showSettings = !showSettings)} class="text-gray-300 hover:text-white" title="إعدادات القارئ">
 					<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 0 2l-.15.08a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1 0-2l.15-.08a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
 				</button>
@@ -257,10 +286,13 @@
 					<div class="absolute top-full right-0 z-10 mt-2 w-64 rounded-lg border border-gray-700 bg-gray-800 p-4 text-sm shadow-lg">
 						<div class="mb-4">
 							<p class="mb-2 font-bold text-white">لون الخلفية</p>
-							<!-- svelte-ignore a11y_consider_explicit_label -->
 							<div class="flex gap-2">
+								<!-- svelte-ignore a11y_consider_explicit_label -->
 								<button on:click={() => readerBackgroundColor.set('black')} class:ring-orange-500={$readerBackgroundColor === 'black'} class="h-8 w-8 rounded-full border border-gray-600 bg-black ring-2 ring-transparent"></button>
+								<!-- svelte-ignore a11y_consider_explicit_label -->
+								<!-- svelte-ignore a11y_consider_explicit_label -->
 								<button on:click={() => readerBackgroundColor.set('white')} class:ring-orange-500={$readerBackgroundColor === 'white'} class="h-8 w-8 rounded-full border border-gray-400 bg-white ring-2 ring-transparent"></button>
+								<!-- svelte-ignore a11y_consider_explicit_label -->
 								<button on:click={() => readerBackgroundColor.set('#f4e8d8')} class:ring-orange-500={$readerBackgroundColor === '#f4e8d8'} class="h-8 w-8 rounded-full border border-gray-400 bg-[#f4e8d8] ring-2 ring-transparent"></button>
 							</div>
 						</div>
@@ -277,10 +309,17 @@
 			</div>
 		</div>
 
-		<div class="h-1 w-full bg-gray-600">
-			<div class="h-1 bg-orange-500" style="width: {progress}%"></div>
-		</div>
-	</header>
+		<div
+            class="h-1 w-full bg-gray-600 cursor-pointer"
+            on:click={handleProgressClick}
+            role="button"
+            tabindex="0"
+            aria-label="الانتقال إلى صفحة"
+            on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleProgressClick(e as any); }}
+        >
+            <div class="h-1 bg-orange-500 pointer-events-none" style="width: {progress}%"></div>
+        </div>
+        </header>
 
 	{#if showThumbnails}
 		<div class="thumbnails-sidebar fixed top-0 left-0 z-30 h-full w-48 overflow-y-auto bg-gray-900/90 p-2 backdrop-blur-md" dir="ltr">
@@ -312,6 +351,7 @@
 				{/each}
 			</div>
 		</div>
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<div class="fixed inset-0 z-20 bg-black/30" on:click={() => (showThumbnails = false)}></div>
 	{/if}
@@ -354,19 +394,14 @@
 								src="{baseCdnUrl}/{pages[currentPageIndex].image_path}?width=1200&quality=85"
 								alt="صفحة رقم {pages[currentPageIndex].page_number}"
 								class="object-contain shadow-md"
-								class:fit-width-horizontal-single={($pageDisplayMode === 'single' ||
-									!pages[currentPageIndex + 1]) &&
-									$imageFitMode !== 'fit-height'}
-								class:fit-width-horizontal-double={$pageDisplayMode === 'double' &&
-									pages[currentPageIndex + 1] &&
-									$imageFitMode !== 'fit-height'}
+								class:fit-width-horizontal-single={($pageDisplayMode === 'single' || !pages[currentPageIndex + 1]) && $imageFitMode !== 'fit-height'}
+								class:fit-width-horizontal-double={$pageDisplayMode === 'double' && pages[currentPageIndex + 1] && $imageFitMode !== 'fit-height'}
 								class:fit-height={$imageFitMode === 'fit-height'}
 								class:original-size={$imageFitMode === 'original'}
 							/>
 							{#if $pageDisplayMode === 'double' && pages[currentPageIndex + 1]}
 								<img
-									src="{baseCdnUrl}/{pages[currentPageIndex + 1]
-										.image_path}?width=1200&quality=85"
+									src="{baseCdnUrl}/{pages[currentPageIndex + 1].image_path}?width=1200&quality=85"
 									alt="صفحة رقم {pages[currentPageIndex + 1].page_number}"
 									class="object-contain shadow-md"
 									class:fit-width-horizontal-double={$imageFitMode !== 'fit-height'}
@@ -406,10 +441,7 @@
 	>
 		<a
 			href="/manga/{manga.slug}/{currentChapter - 1}"
-			class="rounded bg-orange-600 px-6 py-2 transition-colors hover:bg-orange-700 {currentChapter <=
-			1
-				? 'pointer-events-none opacity-50'
-				: ''}">الفصل السابق</a
+			class="rounded bg-orange-600 px-6 py-2 transition-colors hover:bg-orange-700 {currentChapter <= 1 ? 'pointer-events-none opacity-50' : ''}">الفصل السابق</a
 		>
 		<a
 			href="/manga/{manga.slug}/{currentChapter + 1}"
