@@ -12,16 +12,13 @@
 	let editingId: string | null = null;
 	let editingContent = '';
 
-	// ✨ تصحيح: تم تبسيط وتحسين دالة enhance
 	const handleEnhance: SubmitFunction = ({ action, formData }) => {
 		const commentId = formData.get('commentId') as string;
 
-		// Optimistic UI for deletion
 		if (action.pathname.endsWith('/deleteComment')) {
 			approvedComments = approvedComments.filter((c) => c.id !== commentId);
 			pendingComments = pendingComments.filter((c) => c.id !== commentId);
 		}
-		// Optimistic UI for approval
 		if (action.pathname.endsWith('/approveComment')) {
 			const commentToMove = pendingComments.find((c) => c.id === commentId);
 			if (commentToMove) {
@@ -32,19 +29,18 @@
 
 		return async ({ result }) => {
 			if (result.type === 'failure') {
-				// ✨ تصحيح: التعامل مع جميع أنواع الأخطاء المحتملة
 				// @ts-ignore
 				alert(result.data?.error || result.data?.editError || 'حدث خطأ ما');
-				// Invalidate data to refetch from server and reset UI state on failure
 				await invalidateAll();
 			}
 			if (result.type === 'success' && result.status === 200) {
-				editingId = null; // Close editor on successful edit
+				editingId = null;
 				if (action.pathname.endsWith('/editComment')) {
-					// Manually update the comment content in the UI
 					const updatedContent = formData.get('content') as string;
-					const listToUpdate = approvedComments.find(c => c.id === commentId) ? approvedComments : pendingComments;
-					const commentIndex = listToUpdate.findIndex(c => c.id === commentId);
+					const listToUpdate = approvedComments.find((c) => c.id === commentId)
+						? approvedComments
+						: pendingComments;
+					const commentIndex = listToUpdate.findIndex((c) => c.id === commentId);
 					if (commentIndex > -1) {
 						listToUpdate[commentIndex].content = updatedContent;
 					}
@@ -59,10 +55,12 @@
 </svelte:head>
 
 <div class="p-8 font-[Tajawal] bg-gray-900 min-h-screen text-white">
-	<a href="/admin" class="text-blue-400 hover:underline mb-8 block">&larr; العودة إلى لوحة التحكم</a>
-	<h1 class="text-4xl font-bold mb-4">إدارة التعليقات</h1>
+	<a href="/admin" class="text-blue-400 hover:underline mb-8 block text-right">
+		&larr; العودة إلى لوحة التحكم
+	</a>
+	<h1 class="text-4xl font-bold mb-4 text-right">إدارة التعليقات</h1>
 
-	<div class="flex border-b border-gray-700 mb-6">
+	<div class="flex border-b border-gray-700 mb-6 justify-end">
 		<button
 			on:click={() => (activeTab = 'pending')}
 			class="py-2 px-4 transition-colors {activeTab === 'pending'
@@ -83,9 +81,11 @@
 
 	<div class="space-y-6">
 		{#each (activeTab === 'pending' ? pendingComments : approvedComments) as comment (comment.id)}
-			<div class="bg-gray-800 p-4 rounded-lg shadow-lg flex items-start gap-4">
+			<div
+				class="bg-gray-800 p-4 rounded-lg shadow-lg flex flex-row-reverse items-start gap-4 text-right"
+			>
 				<div class="flex-grow">
-					<div class="flex items-center gap-3 mb-2">
+					<div class="flex items-center gap-3 mb-2 justify-end">
 						<span class="font-bold text-orange-400">
 							{comment.expand?.user?.username || 'مستخدم محذوف'}
 						</span>
@@ -107,9 +107,13 @@
 							{#if form?.editError && editingId === comment.id}
 								<p class="text-red-500 text-sm mt-1">{form.editError}</p>
 							{/if}
-							<div class="flex gap-2 mt-2">
+							<div class="flex gap-2 mt-2 justify-end">
 								<button type="submit" class="bg-green-600 text-sm py-1 px-3 rounded">حفظ</button>
-								<button on:click={() => (editingId = null)} type="button" class="bg-gray-600 text-sm py-1 px-3 rounded">
+								<button
+									on:click={() => (editingId = null)}
+									type="button"
+									class="bg-gray-600 text-sm py-1 px-3 rounded"
+								>
 									إلغاء
 								</button>
 							</div>
@@ -139,7 +143,10 @@
 					{#if activeTab === 'pending'}
 						<form method="POST" action="?/approveComment" use:enhance={handleEnhance}>
 							<input type="hidden" name="commentId" value={comment.id} />
-							<button type="submit" class="bg-green-600 text-white w-full py-1 px-3 rounded text-sm hover:bg-green-700">
+							<button
+								type="submit"
+								class="bg-green-600 text-white w-full py-1 px-3 rounded text-sm hover:bg-green-700"
+							>
 								موافقة
 							</button>
 						</form>
@@ -155,7 +162,10 @@
 					</button>
 					<form method="POST" action="?/deleteComment" use:enhance={handleEnhance}>
 						<input type="hidden" name="commentId" value={comment.id} />
-						<button type="submit" class="bg-red-600 text-white w-full py-1 px-3 rounded text-sm hover:bg-red-700">
+						<button
+							type="submit"
+							class="bg-red-600 text-white w-full py-1 px-3 rounded text-sm hover:bg-red-700"
+						>
 							حذف
 						</button>
 					</form>

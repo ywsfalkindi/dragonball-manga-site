@@ -32,17 +32,17 @@
 			<h2 class="text-2xl font-bold mb-4 text-right">أحدث المستخدمين المسجلين</h2>
 			<div class="space-y-4">
 				{#each data.latestUsers as user}
-					<div class="flex justify-between items-center bg-gray-700/50 p-3 rounded-lg text-right">
+                    <div class="flex flex-row-reverse justify-between items-center bg-gray-700/50 p-3 rounded-lg text-right">
 						<div>
 							<p class="font-semibold">{user.username}</p>
 							<p class="text-sm text-gray-400">{user.email}</p>
 						</div>
-						<a href="/admin/users/{user.id}" class="text-blue-400 hover:underline text-sm">
+						<a href="/admin/users/{user.id}" class="text-blue-400 hover:underline text-sm ml-4">
 							عرض التفاصيل
 						</a>
 					</div>
 				{:else}
-					<p class="text-gray-400">لا يوجد مستخدمون جدد.</p>
+					<p class="text-gray-400 text-right">لا يوجد مستخدمون جدد.</p>
 				{/each}
 			</div>
 		</div>
@@ -52,27 +52,27 @@
 			<div class="space-y-4">
 				{#each data.latestComments as comment}
 					<div class="bg-gray-700/50 p-3 rounded-lg">
-						<div class="flex justify-between items-start text-right">
+                        <div class="flex flex-row-reverse justify-between items-start text-right">
 							<div>
 								<p class="font-semibold text-orange-400">
 									{comment.expand?.user?.username || 'مستخدم محذوف'}
 								</p>
 								<p class="text-sm text-gray-400 mt-1 line-clamp-2">{@html comment.content}</p>
 							</div>
-							<a href="/admin/comments" class="text-blue-400 hover:underline text-sm whitespace-nowrap mr-4">
+							<a href="/admin/comments" class="text-blue-400 hover:underline text-sm whitespace-nowrap ml-4">
 								إلى التعليقات
 							</a>
 						</div>
 					</div>
 				{:else}
-					<p class="text-gray-400">لا توجد تعليقات تنتظر المراجعة حاليًا.</p>
+					<p class="text-gray-400 text-right">لا توجد تعليقات تنتظر المراجعة حاليًا.</p>
 				{/each}
 			</div>
 		</div>
 	</div>
 
 	<div class="mt-12">
-        <h2 class="text-2xl font-bold mb-4 text-right">أدوات المحتوى</h2>
+		<h2 class="text-2xl font-bold mb-4 text-right">أدوات المحتوى</h2>
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-800 p-4 rounded-lg text-right">
 			<a href="/admin/mangas" class="block p-4 hover:bg-gray-700 rounded-lg">
 				<h3 class="text-xl font-bold text-blue-400">إدارة المانجا</h3>
@@ -86,7 +86,7 @@
 	</div>
 
 	<div class="mt-12">
-        <h2 class="text-2xl font-bold mb-4 text-right">إدارة الموقع</h2>
+		<h2 class="text-2xl font-bold mb-4 text-right">إدارة الموقع</h2>
 		<div class="bg-gray-800 p-4 rounded-lg grid grid-cols-1 md:grid-cols-2 gap-4 text-right">
 			<a href="/admin/users" class="block p-4 hover:bg-gray-700 rounded-lg">
 				<h3 class="text-xl font-bold text-purple-400">إدارة المستخدمين</h3>

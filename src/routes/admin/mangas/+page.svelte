@@ -10,9 +10,11 @@
 </svelte:head>
 
 <div class="p-8 font-[Tajawal] bg-gray-900 min-h-screen text-white">
-	<a href="/admin" class="text-blue-400 hover:underline mb-8 block">&larr; العودة إلى لوحة التحكم</a>
+	<a href="/admin" class="text-blue-400 hover:underline mb-8 block text-right">
+		&larr; العودة إلى لوحة التحكم
+	</a>
 
-	<div class="flex justify-between items-center mb-8">
+	<div class="flex flex-row-reverse justify-between items-center mb-8">
 		<h1 class="text-4xl font-bold">إدارة المانجا</h1>
 		<a href="/admin/mangas/new" class="bg-green-600 py-2 px-6 rounded hover:bg-green-700">
 			إضافة مانجا جديدة
@@ -24,7 +26,7 @@
 			<thead class="bg-gray-700">
 				<tr>
 					<th class="p-4">العنوان</th>
-					<th class="p-4">Slug</th>
+					<th class="p-4">Slug (الرابط)</th>
 					<th class="p-4">الحالة</th>
 					<th class="p-4">إجراءات</th>
 				</tr>
@@ -35,7 +37,7 @@
 						<td class="p-4 font-semibold">{manga.title}</td>
 						<td class="p-4 text-gray-400" dir="ltr">{manga.slug}</td>
 						<td class="p-4 text-gray-400">{manga.status}</td>
-						<td class="p-4 flex gap-2">
+						<td class="p-4 flex gap-2 justify-end">
 							<a href="/admin/mangas/{manga.id}" class="text-blue-400 hover:underline">تعديل</a>
 							<form
 								method="POST"
