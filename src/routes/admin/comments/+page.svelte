@@ -1,26 +1,55 @@
 <script lang="ts">
-	import type { PageData } from './$types';
+	import type { PageData, ActionData, SubmitFunction } from './$types';
 	import { enhance } from '$app/forms';
-	// ✨ التصحيح: تم استيراد الأنواع من المسار الصحيح ✨
-	import type { SubmitFunction, ActionResult } from '@sveltejs/kit';
+	import { invalidateAll } from '$app/navigation';
 
 	export let data: PageData;
+	export let form: ActionData;
 
-	let comments = data.comments;
+	let { approvedComments, pendingComments } = data;
+	let activeTab: 'pending' | 'approved' = pendingComments.length > 0 ? 'pending' : 'approved';
 
-	// تحديث الواجهة فورًا بعد الحذف الناجح بدون إعادة تحميل الصفحة
-	const handleEnhance: SubmitFunction = ({ formData }) => {
-		const commentId = formData.get('commentId');
-		// Optimistically remove the comment from the UI
-		comments = comments.filter((c) => c.id !== commentId);
+	let editingId: string | null = null;
+	let editingContent = '';
 
-		return async ({ result }: { result: ActionResult }) => {
-			if (result.type === 'failure') {
-				// If the deletion fails, revert the UI and show an alert
-				comments = data.comments; // Restore original comments
-				alert(result.data?.error || 'حدث خطأ ما');
+	// ✨ تصحيح: تم تبسيط وتحسين دالة enhance
+	const handleEnhance: SubmitFunction = ({ action, formData }) => {
+		const commentId = formData.get('commentId') as string;
+
+		// Optimistic UI for deletion
+		if (action.pathname.endsWith('/deleteComment')) {
+			approvedComments = approvedComments.filter((c) => c.id !== commentId);
+			pendingComments = pendingComments.filter((c) => c.id !== commentId);
+		}
+		// Optimistic UI for approval
+		if (action.pathname.endsWith('/approveComment')) {
+			const commentToMove = pendingComments.find((c) => c.id === commentId);
+			if (commentToMove) {
+				pendingComments = pendingComments.filter((c) => c.id !== commentId);
+				approvedComments = [commentToMove, ...approvedComments];
 			}
-			// On success, the UI is already updated, so no action is needed.
+		}
+
+		return async ({ result }) => {
+			if (result.type === 'failure') {
+				// ✨ تصحيح: التعامل مع جميع أنواع الأخطاء المحتملة
+				// @ts-ignore
+				alert(result.data?.error || result.data?.editError || 'حدث خطأ ما');
+				// Invalidate data to refetch from server and reset UI state on failure
+				await invalidateAll();
+			}
+			if (result.type === 'success' && result.status === 200) {
+				editingId = null; // Close editor on successful edit
+				if (action.pathname.endsWith('/editComment')) {
+					// Manually update the comment content in the UI
+					const updatedContent = formData.get('content') as string;
+					const listToUpdate = approvedComments.find(c => c.id === commentId) ? approvedComments : pendingComments;
+					const commentIndex = listToUpdate.findIndex(c => c.id === commentId);
+					if (commentIndex > -1) {
+						listToUpdate[commentIndex].content = updatedContent;
+					}
+				}
+			}
 		};
 	};
 </script>
@@ -31,51 +60,112 @@
 
 <div class="p-8 font-[Tajawal] bg-gray-900 min-h-screen text-white">
 	<a href="/admin" class="text-blue-400 hover:underline mb-8 block">&larr; العودة إلى لوحة التحكم</a>
-	<h1 class="text-4xl font-bold mb-8">إدارة التعليقات</h1>
+	<h1 class="text-4xl font-bold mb-4">إدارة التعليقات</h1>
+
+	<div class="flex border-b border-gray-700 mb-6">
+		<button
+			on:click={() => (activeTab = 'pending')}
+			class="py-2 px-4 transition-colors {activeTab === 'pending'
+				? 'border-b-2 border-orange-500 text-orange-500'
+				: 'text-gray-400 hover:text-white'}"
+		>
+			بانتظار الموافقة ({pendingComments.length})
+		</button>
+		<button
+			on:click={() => (activeTab = 'approved')}
+			class="py-2 px-4 transition-colors {activeTab === 'approved'
+				? 'border-b-2 border-orange-500 text-orange-500'
+				: 'text-gray-400 hover:text-white'}"
+		>
+			الموافق عليها ({approvedComments.length})
+		</button>
+	</div>
 
 	<div class="space-y-6">
-		{#if comments.length > 0}
-			{#each comments as comment (comment.id)}
-				<div class="bg-gray-800 p-4 rounded-lg shadow-lg flex items-start gap-4">
-					<div class="flex-grow">
-						<div class="flex items-center gap-3 mb-2">
-							<span class="font-bold text-orange-400"
-								>{comment.expand?.user?.username || 'مستخدم محذوف'}</span
-							>
-							<span class="text-xs text-gray-400">
-								{new Date(comment.created).toLocaleString('ar')}
-							</span>
-						</div>
-						<div class="text-gray-300 prose prose-invert">{@html comment.content}</div>
-						<div class="text-xs text-blue-400 mt-2">
-							{#if comment.expand?.chapter?.expand?.manga && comment.expand?.chapter}
-								<a
-									href="/manga/{comment.expand.chapter.expand.manga.slug}/{comment.expand.chapter
-										.chapter_number}"
-									class="hover:underline"
-								>
-									في: {comment.expand.chapter.expand.manga.title} - فصل #{comment.expand.chapter
-										.chapter_number}
-								</a>
-							{/if}
-						</div>
+		{#each (activeTab === 'pending' ? pendingComments : approvedComments) as comment (comment.id)}
+			<div class="bg-gray-800 p-4 rounded-lg shadow-lg flex items-start gap-4">
+				<div class="flex-grow">
+					<div class="flex items-center gap-3 mb-2">
+						<span class="font-bold text-orange-400">
+							{comment.expand?.user?.username || 'مستخدم محذوف'}
+						</span>
+						<span class="text-xs text-gray-400">
+							{new Date(comment.created).toLocaleString('ar')}
+						</span>
 					</div>
+
+					{#if editingId === comment.id}
+						<form method="POST" action="?/editComment" use:enhance={handleEnhance}>
+							<input type="hidden" name="commentId" value={comment.id} />
+							<!-- svelte-ignore element_invalid_self_closing_tag -->
+							<textarea
+								name="content"
+								bind:value={editingContent}
+								rows="3"
+								class="w-full bg-gray-700 p-2 rounded"
+							/>
+							{#if form?.editError && editingId === comment.id}
+								<p class="text-red-500 text-sm mt-1">{form.editError}</p>
+							{/if}
+							<div class="flex gap-2 mt-2">
+								<button type="submit" class="bg-green-600 text-sm py-1 px-3 rounded">حفظ</button>
+								<button on:click={() => (editingId = null)} type="button" class="bg-gray-600 text-sm py-1 px-3 rounded">
+									إلغاء
+								</button>
+							</div>
+						</form>
+					{:else}
+						<div class="text-gray-300 prose prose-invert max-w-none">
+							{@html comment.content}
+						</div>
+					{/if}
+
+					{#if comment.expand?.chapter}
+						<div class="text-xs text-blue-400 mt-2">
+							<a
+								href="/manga/{comment.expand.chapter.expand.manga.slug}/{comment.expand.chapter
+									.chapter_number}"
+								class="hover:underline"
+								target="_blank"
+							>
+								في: {comment.expand.chapter.expand.manga.title} - فصل #
+								{comment.expand.chapter.chapter_number}
+							</a>
+						</div>
+					{/if}
+				</div>
+
+				<div class="flex flex-col gap-2 flex-shrink-0">
+					{#if activeTab === 'pending'}
+						<form method="POST" action="?/approveComment" use:enhance={handleEnhance}>
+							<input type="hidden" name="commentId" value={comment.id} />
+							<button type="submit" class="bg-green-600 text-white w-full py-1 px-3 rounded text-sm hover:bg-green-700">
+								موافقة
+							</button>
+						</form>
+					{/if}
+					<button
+						on:click={() => {
+							editingId = comment.id;
+							editingContent = comment.content.replace(/<br\s*\/?>/gi, '\n');
+						}}
+						class="bg-blue-600 text-white py-1 px-3 rounded text-sm hover:bg-blue-700"
+					>
+						تعديل
+					</button>
 					<form method="POST" action="?/deleteComment" use:enhance={handleEnhance}>
 						<input type="hidden" name="commentId" value={comment.id} />
-						<button
-							type="submit"
-							class="bg-red-600 text-white py-1 px-3 rounded text-sm hover:bg-red-700 transition-colors"
-						>
+						<button type="submit" class="bg-red-600 text-white w-full py-1 px-3 rounded text-sm hover:bg-red-700">
 							حذف
 						</button>
 					</form>
 				</div>
-			{:else}
-				<p class="text-center text-gray-400 py-10">لا توجد تعليقات لعرضها.</p>
-			{/each}
+			</div>
 		{:else}
-			<p class="text-center text-gray-400 py-10">لا توجد تعليقات لعرضها.</p>
-		{/if}
+			<p class="text-center text-gray-400 py-10">
+				{activeTab === 'pending' ? 'لا توجد تعليقات تنتظر المراجعة.' : 'لا توجد تعليقات لعرضها.'}
+			</p>
+		{/each}
 	</div>
 </div>
 

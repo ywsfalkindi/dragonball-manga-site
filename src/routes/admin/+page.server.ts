@@ -2,21 +2,32 @@
 import { pb } from '$lib/pocketbase';
 
 export const load = async () => {
-	// --- بداية التحسين: تشغيل جميع الطلبات في نفس الوقت ---
-	const [mangaCount, chapterCount, userCount, commentCount] = await Promise.all([
+	// ✨ بداية التصحيح: تم تغيير طريقة جلب البيانات لتجنب الإلغاء التلقائي ✨
+	const [mangaRecords, chapterRecords, userRecords, commentRecords] = await Promise.all([
 		pb.collection('mangas').getFullList({ fields: 'id' }),
 		pb.collection('chapters').getFullList({ fields: 'id' }),
-		pb.collection('users').getFullList({ fields: 'id' }),
-		pb.collection('comments').getFullList({ fields: 'id' })
+		// 1. جلب كل المستخدمين مرة واحدة فقط، مع الفرز للحصول على الأحدث
+		pb.collection('users').getFullList({ sort: '-created' }),
+		// 2. جلب كل التعليقات مرة واحدة فقط، مع البيانات اللازمة للتصفية
+		pb.collection('comments').getFullList({
+			sort: '-created',
+			expand: 'user,chapter'
+		})
 	]);
-	// --- نهاية التحسين ---
+
+	// 3. معالجة البيانات بعد جلبها بدلاً من إرسال طلبات متعددة
+	const latestUsers = userRecords.slice(0, 5);
+	const latestComments = commentRecords.filter((c) => !c.isApproved).slice(0, 5);
+	// ✨ نهاية التصحيح ✨
 
 	return {
 		stats: {
-			mangas: mangaCount.length,
-			chapters: chapterCount.length,
-			users: userCount.length,
-			comments: commentCount.length
-		}
+			mangas: mangaRecords.length,
+			chapters: chapterRecords.length,
+			users: userRecords.length,
+			comments: commentRecords.length
+		},
+		latestUsers,
+		latestComments
 	};
 };
