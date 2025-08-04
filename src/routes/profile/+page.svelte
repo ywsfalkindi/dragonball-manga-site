@@ -7,16 +7,16 @@
 
 	export let data: PageData;
 	export let form: ActionData;
-
 	collectedBallsStore.set(data.collectedBalls || []);
 	let showSummoningScene = false;
-	let animationStep = 0; // 0: start, 1: balls gather, 2.5: shake, 2: flash, 3: shenron appears, 4: wishes appear
+	let animationStep = 0;
+	// 0: start, 1: balls gather, 2.5: shake, 2: flash, 3: shenron appears, 4: wishes appear
 	let selectedWishes: any[] = [];
 	let finalMessage = '';
     
     // ✨ التحسين: استخدام onMount لإدارة الرسائل بعد التحميل الكامل للصفحة ✨
     let passwordSuccessMessage = '';
-    onMount(() => {
+	onMount(() => {
         if (form?.passwordSuccess) {
             passwordSuccessMessage = form.passwordSuccess;
             setTimeout(() => {
@@ -30,7 +30,7 @@
 			selectedWishes = form.wishes;
 			showSummoningScene = true;
             // ✨ التحسين: بدء تسلسل التحريك عند عرض المشهد ✨
-			animationStep = 1; 
+			animationStep = 1;
 		} else if (form.shenronWished) {
 			finalMessage = form.message || 'تحققت أمنيتك!';
 			collectedBallsStore.set([]);
@@ -45,11 +45,14 @@
     // ✨ التحسين: استخدام on:animationend لتسلسل الحركات ✨
     function handleAnimationEnd(event: AnimationEvent) {
         if (event.animationName === 'circle-in') {
-            animationStep = 2.5; // Trigger shake
+            animationStep = 2.5;
+            // Trigger shake
         } else if (event.animationName === 'screen-shake') {
-            animationStep = 2; // Trigger flash
+            animationStep = 2;
+            // Trigger flash
         } else if (event.animationName === 'flash-effect') {
-             animationStep = 3; // Trigger Shenron
+             animationStep = 3;
+             // Trigger Shenron
         }
     }
 </script>
@@ -136,33 +139,39 @@
                     <div class="text-center">
                         <h3 class="text-xl text-gray-400">المانجا المفضلة</h3>
                         <p class="text-5xl font-bold mt-2 text-orange-500">{data.stats.totalFavorites}</p>
+     
                     </div>
                     <div class="text-center">
                         <h3 class="text-xl text-gray-400">الفصول المقروءة</h3>
                         <p class="text-5xl font-bold mt-2 text-orange-500">{data.stats.totalChaptersRead}</p>
-                    </div>
+         
+                     </div>
                 </div>
             </div>
 
             <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
                 <h2 class="text-2xl font-bold mb-4">تغيير كلمة المرور</h2>
                 <form method="POST" action="?/changePassword" class="space-y-4">
+     
                     <div>
                         <input type="password" name="oldPassword" placeholder="كلمة المرور القديمة" class="w-full bg-gray-700 text-white rounded p-2 border border-gray-600" required />
                     </div>
                     <div>
-                        <input type="password" name="newPassword" placeholder="كلمة المرور الجديدة" class="w-full bg-gray-700 text-white rounded p-2 border-gray-600" required />
+       
+                         <input type="password" name="newPassword" placeholder="كلمة المرور الجديدة" class="w-full bg-gray-700 text-white rounded p-2 border border-gray-600" required />
                     </div>
                     <div>
-                        <input type="password" name="newPasswordConfirm" placeholder="تأكيد كلمة المرور الجديدة" class="w-full bg-gray-700 text-white rounded p-2 border-gray-600" required />
+                        <input type="password" name="newPasswordConfirm" placeholder="تأكيد كلمة المرور الجديدة" class="w-full bg-gray-700 text-white rounded p-2 border border-gray-600" required />
                     </div>
                     {#if form?.passwordError}
                         <p class="text-red-500 text-sm text-center">{form.passwordError}</p>
                     {/if}
-                     {#if passwordSuccessMessage}
+    
+                         {#if passwordSuccessMessage}
                         <p class="text-green-500 text-sm text-center">{passwordSuccessMessage}</p>
                     {/if}
                     <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded hover:bg-blue-700 transition-colors">
+     
                         حفظ التغييرات
                     </button>
                 </form>

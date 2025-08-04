@@ -6,12 +6,10 @@
 	import { onMount, onDestroy } from 'svelte';
     import { browser } from '$app/environment';
     import { PUBLIC_CDN_URL } from '$env/static/public';
-	
-
 	export let data: PageData;
 // svelte-ignore export_let_unused
     export let form: ActionData;
-    $: ({ user, manga, chapter, pages, comments, nextChapterExists } = data);
+	$: ({ user, manga, chapter, pages, comments, nextChapterExists } = data);
     $: currentChapter = chapter ? Number(chapter.chapter_number) : 0;
 	let currentPageIndex = 0;
 	$: progress = pages.length > 0 ? ((currentPageIndex + 1) / pages.length) * 100 : 0;
@@ -27,7 +25,7 @@
     function onImageError(event: Event) {
         const img = event.target as HTMLImageElement;
         img.src = '/image_error.png'; // يجب إضافة صورة بديلة في مجلد static
-        img.style.width = '300px'; 
+        img.style.width = '300px';
         img.style.opacity = '0.5';
     }
 
@@ -59,10 +57,8 @@
         const x = event.clientX - rect.left;
         const percentage = x / rect.width;
         const pageCount = pages.length;
-        
         if (pageCount === 0) return;
         const targetIndex = Math.floor(percentage * pageCount);
-        
         if ($readingMode === 'horizontal') {
             const step = $pageDisplayMode === 'double' ? 2 : 1;
             currentPageIndex = Math.max(0, Math.min(pageCount - step, targetIndex));
@@ -185,6 +181,7 @@
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
 	class="reader-container min-h-screen font-[Tajawal]"
 	style="background-color: {$readerBackgroundColor};"
@@ -202,8 +199,7 @@
 	>
 		<div class="container mx-auto flex items-center justify-between px-4 py-3">
 			<a href="/manga/{manga.slug}" class="text-sm transition-colors hover:text-orange-500 md:text-base">
-				&larr;
-				قائمة الفصول
+				&larr; قائمة الفصول
 			</a>
 
 			<div class="flex items-center gap-x-2 md:gap-x-4">
@@ -297,7 +293,7 @@
 		</div>
 
 		<div
-            class="h-1 w-full bg-gray-600 cursor-pointer"
+             class="h-1 w-full bg-gray-600 cursor-pointer"
             on:click={handleProgressClick}
             role="button"
             tabindex="0"
@@ -397,7 +393,8 @@
 									class:fit-width-horizontal-double={$imageFitMode !== 'fit-height'}
 									class:fit-height={$imageFitMode === 'fit-height'}
 									class:original-size={$imageFitMode === 'original'}
-                                    on:error={onImageError}
+                            
+                                     on:error={onImageError}
 								/>
 							{/if}
 						</div>
@@ -430,7 +427,8 @@
     class="reader-footer container mx-auto flex items-center justify-between px-4 py-6 text-white z-20"
     class:footer-hidden={!uiVisible}
 >
-    <a
+  
+       <a
         href="/manga/{manga.slug}/{currentChapter - 1}"
         class="rounded bg-orange-600 px-6 py-2 transition-colors hover:bg-orange-700 {currentChapter <= 1 ? 'pointer-events-none opacity-50' : ''}"
     >الفصل السابق</a>

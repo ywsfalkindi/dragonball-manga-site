@@ -7,7 +7,6 @@
     import { fly } from 'svelte/transition';
 
     export let data: LayoutData;
-    
     // ✨ التحسين: إظهار رسالة عند تسجيل الخروج ✨
     let showLogoutToast = false;
     onMount(() => {
@@ -43,15 +42,18 @@
                 موقع دراغون بول
             </a>
             <div class="text-sm">
-                {#if data.user}
+          
+                 {#if data.user}
                     <div class="flex items-center gap-x-4">
                         <span class="hidden sm:inline">أهلاً بك، {data.user.username}</span>
                         <a href="/profile" class="py-2 px-4 bg-orange-600 rounded hover:bg-orange-700 whitespace-nowrap">ملفي الشخصي</a>
-                    </div>
+          
+                     </div>
                 {:else}
                     <div class="flex items-center gap-x-2">
                         <a href="/login" class="py-2 px-4 hover:bg-gray-700 rounded whitespace-nowrap">تسجيل الدخول</a>
-                        <a href="/signup" class="py-2 px-4 bg-orange-600 rounded hover:bg-orange-700 whitespace-nowrap">إنشاء حساب</a>
+                    
+                         <a href="/signup" class="py-2 px-4 bg-orange-600 rounded hover:bg-orange-700 whitespace-nowrap">إنشاء حساب</a>
                     </div>
                 {/if}
             </div>

@@ -1,9 +1,9 @@
 <script lang="ts">
 	import type { ActionData } from './$types';
-	import { page } from '$app/stores'; // <-- استيراد page store للوصول إلى الرابط
+	import { page } from '$app/stores';
+	// <-- استيراد page store للوصول إلى الرابط
 
 	export let form: ActionData;
-
 	// التحقق من وجود 'registered' في الرابط
 	const registrationSuccess = $page.url.searchParams.get('registered') === 'true';
 </script>
