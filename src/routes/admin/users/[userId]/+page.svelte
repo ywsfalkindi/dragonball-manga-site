@@ -2,8 +2,8 @@
 	import type { PageData, ActionData } from './$types';
 	export let data: PageData;
 	export let form: ActionData;
-
 	let { userDetails } = data;
+	let activeTab = 'stats'; // 'stats', 'comments', 'history'
 </script>
 
 <svelte:head>
@@ -15,59 +15,99 @@
 		&larr; العودة إلى قائمة المستخدمين
 	</a>
 	<h1 class="text-4xl font-bold mb-2">ملف {data.userDetails.username}</h1>
-	<p class="text-gray-400 mb-8">تاريخ الانضمام: {new Date(data.userDetails.created).toLocaleDateString('ar')}</p>
+	<p class="text-gray-400 mb-8">
+		تاريخ الانضمام: {new Date(data.userDetails.created).toLocaleDateString('ar')}
+	</p>
 
 	<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
 		<div class="lg:col-span-2 space-y-8">
-			<div class="bg-gray-800 p-6 rounded-lg shadow-lg">
-				<h2 class="text-2xl font-bold mb-4">إحصائيات</h2>
-				<div class="grid grid-cols-3 gap-4 text-center">
-					<div>
-						<p class="text-4xl font-bold text-orange-500">{data.stats.totalFavorites}</p>
-						<p class="text-gray-400">مانجا مفضلة</p>
-					</div>
-					<div>
-						<p class="text-4xl font-bold text-blue-500">{data.stats.totalChaptersRead}</p>
-						<p class="text-gray-400">فصل مقروء</p>
-					</div>
-					<div>
-						<p class="text-4xl font-bold text-green-500">{data.stats.totalComments}</p>
-						<p class="text-gray-400">تعليق</p>
-					</div>
-				</div>
+			<div class="border-b border-gray-700">
+				<nav class="-mb-px flex gap-6" aria-label="Tabs">
+					<button
+						on:click={() => (activeTab = 'stats')}
+						class="{activeTab === 'stats' ? 'border-orange-500 text-orange-400' : 'border-transparent text-gray-400 hover:text-white hover:border-gray-500'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm"
+					>
+						الإحصائيات والنشاط
+					</button>
+					<button
+						on:click={() => (activeTab = 'comments')}
+						class="{activeTab === 'comments' ? 'border-orange-500 text-orange-400' : 'border-transparent text-gray-400 hover:text-white hover:border-gray-500'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm"
+					>
+						آخر التعليقات
+					</button>
+				</nav>
 			</div>
 
-			<div class="bg-gray-800 p-6 rounded-lg shadow-lg">
-				<h2 class="text-2xl font-bold mb-4">كرات التنين</h2>
-				<div class="flex justify-center items-center gap-4">
-					{#each { length: 7 } as _, i}
-						{@const ballNum = i + 1}
-						{@const hasBall = data.collectedBalls.includes(ballNum)}
-						<img
-							src={`/dragonballs/db_${ballNum}.png`}
-							alt="كرة رقم {ballNum}"
-							class="w-12 h-12 transition-opacity {hasBall ? 'opacity-100' : 'opacity-20 grayscale'}"
-							title={hasBall ? 'تم جمعها' : 'مفقودة'}
-						/>
-					{/each}
-				</div>
-			</div>
-
-			<div class="bg-gray-800 p-6 rounded-lg shadow-lg">
-				<h2 class="text-2xl font-bold mb-4">آخر الفصول المقروءة</h2>
-				<div class="space-y-2">
-					{#each data.latestReadHistory as record}
-						<div class="text-gray-300">
-							- قراءة الفصل #{record.expand?.chapter.chapter_number} من مانجا
-							<a href="/manga/{record.expand?.manga.slug}" class="text-orange-400 hover:underline">
-								{record.expand?.manga.title}
-							</a>
+			{#if activeTab === 'stats'}
+				<div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+					<h2 class="text-2xl font-bold mb-4">إحصائيات</h2>
+					<div class="grid grid-cols-3 gap-4 text-center">
+						<div>
+							<p class="text-4xl font-bold text-orange-500">{data.stats.totalFavorites}</p>
+							<p class="text-gray-400">مانجا مفضلة</p>
 						</div>
-					{:else}
-						<p class="text-gray-400">لا يوجد سجل قراءة حديث.</p>
-					{/each}
+						<div>
+							<p class="text-4xl font-bold text-blue-500">{data.stats.totalChaptersRead}</p>
+							<p class="text-gray-400">فصل مقروء</p>
+						</div>
+						<div>
+							<p class="text-4xl font-bold text-green-500">{data.stats.totalComments}</p>
+							<p class="text-gray-400">تعليق</p>
+						</div>
+					</div>
 				</div>
-			</div>
+
+				<div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+					<h2 class="text-2xl font-bold mb-4">كرات التنين</h2>
+					<div class="flex justify-center items-center gap-4">
+						{#each { length: 7 } as _, i}
+							{@const ballNum = i + 1}
+							{@const hasBall = data.collectedBalls.includes(ballNum)}
+							<img
+								src={`/dragonballs/db_${ballNum}.png`}
+								alt="كرة رقم {ballNum}"
+								class="w-12 h-12 transition-opacity {hasBall ? 'opacity-100' : 'opacity-20 grayscale'}"
+								title={hasBall ? 'تم جمعها' : 'مفقودة'}
+							/>
+						{/each}
+					</div>
+				</div>
+
+				<div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+					<h2 class="text-2xl font-bold mb-4">آخر الفصول المقروءة</h2>
+					<div class="space-y-2">
+						{#each data.latestReadHistory as record}
+							<div class="text-gray-300">
+								- قراءة الفصل #{record.expand?.chapter.chapter_number} من مانجا
+								<a
+									href="/manga/{record.expand?.manga.slug}"
+									class="text-orange-400 hover:underline"
+								>
+									{record.expand?.manga.title}
+								</a>
+							</div>
+						{:else}
+							<p class="text-gray-400">لا يوجد سجل قراءة حديث.</p>
+						{/each}
+					</div>
+				</div>
+			{:else if activeTab === 'comments'}
+				<div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+					<h2 class="text-2xl font-bold mb-4">آخر 10 تعليقات</h2>
+					<div class="space-y-4">
+						{#each data.latestComments as comment}
+							<div class="bg-gray-700/50 p-3 rounded">
+								<p class="text-sm text-gray-300">{@html comment.content}</p>
+								<p class="text-xs text-blue-400 mt-2">
+									في الفصل #{comment.expand?.chapter.chapter_number}
+								</p>
+							</div>
+						{:else}
+							<p class="text-gray-400">لم يقم المستخدم بكتابة أي تعليقات.</p>
+						{/each}
+					</div>
+				</div>
+			{/if}
 		</div>
 
 		<div class="space-y-8">

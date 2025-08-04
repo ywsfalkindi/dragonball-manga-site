@@ -3,10 +3,14 @@
 	export let data: PageData;
 </script>
 
-<svelte:head><title>لوحة التحكم</title></svelte:head>
+<svelte:head>
+	<title>لوحة التحكم</title>
+</svelte:head>
 
 <div class="p-8 font-[Tajawal] bg-gray-900 min-h-screen text-white">
-	<h1 class="text-4xl font-bold mb-8 text-right">لوحة التحكم</h1>
+	<div class="flex flex-row-reverse justify-between items-center mb-8">
+		<h1 class="text-4xl font-bold">لوحة التحكم</h1>
+		</div>
 
 	<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 		<div class="bg-gray-800 p-6 rounded-lg shadow-lg text-center">
@@ -27,12 +31,37 @@
 		</div>
 	</div>
 
+	<div class="mt-12">
+		<h2 class="text-2xl font-bold mb-4 text-right">تحليلات الموقع</h2>
+		<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+			<div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+				<h3 class="text-xl font-bold mb-4 text-right">المستخدمون الجدد (آخر 7 أيام)</h3>
+				<div class="text-center text-gray-400 py-8">
+					[رسم بياني لتوضيح نمو المستخدمين]
+				</div>
+			</div>
+			<div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+				<h3 class="text-xl font-bold mb-4 text-right">المانجا الأكثر قراءة (هذا الشهر)</h3>
+				<ul class="space-y-2 text-right">
+					{#each data.mostReadMangas as manga}
+						<li class="text-gray-300">{manga.title} - {manga.reads} قراءة</li>
+					{:else}
+						<li class="text-gray-400">لا توجد بيانات كافية بعد.</li>
+					{/each}
+				</ul>
+			</div>
+		</div>
+	</div>
+
+
 	<div class="mt-12 grid grid-cols-1 lg:grid-cols-2 gap-8">
 		<div class="bg-gray-800 p-6 rounded-lg shadow-lg">
 			<h2 class="text-2xl font-bold mb-4 text-right">أحدث المستخدمين المسجلين</h2>
 			<div class="space-y-4">
 				{#each data.latestUsers as user}
-                    <div class="flex flex-row-reverse justify-between items-center bg-gray-700/50 p-3 rounded-lg text-right">
+					<div
+						class="flex flex-row-reverse justify-between items-center bg-gray-700/50 p-3 rounded-lg text-right"
+					>
 						<div>
 							<p class="font-semibold">{user.username}</p>
 							<p class="text-sm text-gray-400">{user.email}</p>
@@ -52,14 +81,17 @@
 			<div class="space-y-4">
 				{#each data.latestComments as comment}
 					<div class="bg-gray-700/50 p-3 rounded-lg">
-                        <div class="flex flex-row-reverse justify-between items-start text-right">
+						<div class="flex flex-row-reverse justify-between items-start text-right">
 							<div>
 								<p class="font-semibold text-orange-400">
 									{comment.expand?.user?.username || 'مستخدم محذوف'}
 								</p>
 								<p class="text-sm text-gray-400 mt-1 line-clamp-2">{@html comment.content}</p>
 							</div>
-							<a href="/admin/comments" class="text-blue-400 hover:underline text-sm whitespace-nowrap ml-4">
+							<a
+								href="/admin/comments"
+								class="text-blue-400 hover:underline text-sm whitespace-nowrap ml-4"
+							>
 								إلى التعليقات
 							</a>
 						</div>
@@ -73,21 +105,25 @@
 
 	<div class="mt-12">
 		<h2 class="text-2xl font-bold mb-4 text-right">أدوات المحتوى</h2>
-		<div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-800 p-4 rounded-lg text-right">
+		<div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-800 p-4 rounded-lg text-right">
 			<a href="/admin/mangas" class="block p-4 hover:bg-gray-700 rounded-lg">
 				<h3 class="text-xl font-bold text-blue-400">إدارة المانجا</h3>
-				<p class="text-gray-400 mt-1">إضافة، تعديل، وحذف المانجا الموجودة.</p>
+				<p class="text-gray-400 mt-1">إضافة، تعديل، وحذف المانجا والفصول.</p>
 			</a>
 			<a href="/admin/add-chapter" class="block p-4 hover:bg-gray-700 rounded-lg">
 				<h3 class="text-xl font-bold text-green-400">إضافة فصل جديد</h3>
 				<p class="text-gray-400">أداة لإضافة فصل كامل بصفحاته تلقائيًا.</p>
+			</a>
+			<a href="/admin/media" class="block p-4 hover:bg-gray-700 rounded-lg">
+				<h3 class="text-xl font-bold text-yellow-400">إدارة الوسائط</h3>
+				<p class="text-gray-400 mt-1">عرض الصور المرفوعة وحذف غير المستخدم منها.</p>
 			</a>
 		</div>
 	</div>
 
 	<div class="mt-12">
 		<h2 class="text-2xl font-bold mb-4 text-right">إدارة الموقع</h2>
-		<div class="bg-gray-800 p-4 rounded-lg grid grid-cols-1 md:grid-cols-2 gap-4 text-right">
+		<div class="bg-gray-800 p-4 rounded-lg grid grid-cols-1 md:grid-cols-3 gap-4 text-right">
 			<a href="/admin/users" class="block p-4 hover:bg-gray-700 rounded-lg">
 				<h3 class="text-xl font-bold text-purple-400">إدارة المستخدمين</h3>
 				<p class="text-gray-400 mt-1">عرض المستخدمين، تغيير أدوارهم، وحظرهم.</p>
@@ -95,6 +131,10 @@
 			<a href="/admin/comments" class="block p-4 hover:bg-gray-700 rounded-lg">
 				<h3 class="text-xl font-bold text-red-400">إدارة التعليقات</h3>
 				<p class="text-gray-400 mt-1">عرض، تعديل، وحذف التعليقات من الموقع.</p>
+			</a>
+			<a href="/admin/settings" class="block p-4 hover:bg-gray-700 rounded-lg">
+				<h3 class="text-xl font-bold text-teal-400">إعدادات الموقع</h3>
+				<p class="text-gray-400 mt-1">التحكم في وضع الصيانة والإعلانات.</p>
 			</a>
 		</div>
 	</div>

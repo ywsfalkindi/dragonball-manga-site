@@ -1,4 +1,4 @@
-// src/routes/admin/users/[userId]/+page.server.ts (New file)
+// src/routes/admin/users/[userId]/+page.server.ts
 import { pb } from '$lib/pocketbase';
 import { error, fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
@@ -9,30 +9,37 @@ export const load: PageServerLoad = async ({ params }) => {
 
 		// جلب بيانات مرتبطة بالمستخدم
 		const [favorites, readHistory, comments, userDragonBalls] = await Promise.all([
-			pb.collection('favorites').getFullList({
+			pb
+				.collection('favorites')
+				.getFullList({
+					filter: `user.id = "${params.userId}"`,
+					expand: 'manga',
+					sort: '-created'
+				}),
+			pb.collection('read_history').getList(1, 10, {
 				filter: `user.id = "${params.userId}"`,
-				expand: 'manga',
-				sort: '-created'
+				sort: '-created',
+				expand: 'chapter,manga'
 			}),
-			pb
-				.collection('read_history')
-				.getList(1, 10, { filter: `user.id = "${params.userId}"`, sort: '-created', expand: 'chapter,manga' }),
-			pb.collection('comments').getFullList({ filter: `user.id = "${params.userId}"` }),
-			pb
-				.collection('user_dragonballs')
-				.getFirstListItem(`user.id = "${params.userId}"`)
-				.catch(() => null)
+			// جلب آخر 10 تعليقات للمستخدم
+			pb.collection('comments').getList(1, 10, {
+				filter: `user.id = "${params.userId}"`,
+				sort: '-created',
+				expand: 'chapter'
+			}),
+			pb.collection('user_dragonballs').getFirstListItem(`user.id = "${params.userId}"`).catch(() => null)
 		]);
 
 		return {
 			userDetails: user,
 			stats: {
 				totalFavorites: favorites.length,
-				totalComments: comments.length,
+				totalComments: comments.totalItems, // استخدام العدد الإجمالي من الاستجابة
 				totalChaptersRead: readHistory.totalItems
 			},
 			favorites,
 			latestReadHistory: readHistory.items,
+			latestComments: comments.items, // إضافة التعليقات
 			collectedBalls: userDragonBalls?.collected_balls || []
 		};
 	} catch (err) {
