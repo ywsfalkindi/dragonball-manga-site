@@ -476,26 +476,26 @@
 		{/if}
 		<div class="space-y-6">
 			{#each comments as comment}
-				<article class="flex space-x-4">
-					{#if comment.expand?.user}
-						<div class="flex-shrink-0">
-							<div
-								class="flex h-12 w-12 items-center justify-center rounded-full bg-gray-700 font-bold text-white"
-							>
-								{comment.expand.user.username.charAt(0).toUpperCase()}
-							</div>
-						</div>
-						<div class="flex-grow rounded-lg bg-gray-800 p-4">
-							<p class="font-bold text-orange-400">{comment.expand.user.username}</p>
-							<div class="prose prose-invert mt-2 text-gray-300">
-								{@html comment.content}
-							</div>
-						</div>
-					{/if}
-				</article>
-			{:else}
-				<p class="text-center text-gray-400">لا توجد تعليقات بعد. كن أول من يعلق!</p>
-			{/each}
+    <article class="flex space-x-4">
+        {#if comment.expand?.user}
+            <div class="flex-shrink-0">
+                <div
+                    class="flex h-12 w-12 items-center justify-center rounded-full bg-gray-700 font-bold text-white"
+                >
+                    {(comment.expand.user.username || '?').charAt(0).toUpperCase()}
+                </div>
+            </div>
+            <div class="flex-grow rounded-lg bg-gray-800 p-4">
+                <p class="font-bold text-orange-400">{comment.expand.user.username || 'مستخدم محذوف'}</p>
+                <div class="prose prose-invert mt-2 text-gray-300">
+                    {@html comment.content}
+                </div>
+            </div>
+        {/if}
+    </article>
+{:else}
+    <p class="text-center text-gray-400">لا توجد تعليقات بعد. كن أول من يعلق!</p>
+{/each}
 		</div>
 	</section>
 </div>
