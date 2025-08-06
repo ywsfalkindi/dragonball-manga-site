@@ -1,10 +1,34 @@
 <script lang="ts">
 	import type { PageData } from './$types';
+	import { enhance } from '$app/forms';
+	import { fly } from 'svelte/transition';
 
 	export let data: PageData;
-	const { manga, isFavorited, chaptersResult, readChapterIds, lastReadChapter, user } = data;
-	const chapters = chaptersResult.items;
+
+	// ✨ FIX: Use reactive statements ($:) to safely handle data as it loads.
+	// This ensures the variables are always up-to-date when `data` changes.
+	$: ({ manga, isFavorited, chaptersResult, readChapterIds, lastReadChapter, user } = data);
+	
+	// ✨ FIX: Use optional chaining (?.) and a fallback value ([])
+	// This prevents the error if `chaptersResult` is not yet available,
+	// and ensures `chapters` is always an array.
+	$: chapters = chaptersResult?.items || [];
+
+	// Variables to control the toast notification
+	let showToast = false;
+	let toastMessage = '';
 </script>
+
+<!-- This is the toast notification component. It will appear when showToast is true. -->
+{#if showToast}
+	<div
+		in:fly={{ y: -20, duration: 300 }}
+		out:fly={{ y: -20, duration: 300 }}
+		class="fixed top-20 right-1/2 translate-x-1/2 z-[9999] bg-green-600 text-white py-2 px-6 rounded-lg shadow-lg"
+	>
+		{toastMessage}
+	</div>
+{/if}
 
 <svelte:head>
 	<title>قراءة مانجا {manga.title} - جميع الفصول</title>
@@ -23,7 +47,27 @@
 
 			{#if user}
 				<div class="mt-6 flex items-center space-x-4 flex-wrap gap-y-4">
-					<form method="POST" action="?/{isFavorited ? 'unfavorite' : 'favorite'}">
+					<!-- This form handles adding/removing from favorites. -->
+					<form
+						method="POST"
+						action="?/{isFavorited ? 'unfavorite' : 'favorite'}"
+						use:enhance={() => {
+							// This code runs just before the form is submitted.
+							// We set the message that will be displayed in the toast.
+							toastMessage = isFavorited ? 'تمت الإزالة من المفضلة بنجاح' : 'تمت الإضافة إلى المفضلة بنجاح';
+
+							return async ({ update }) => {
+								// This code runs after the server action is complete.
+								// SvelteKit automatically updates the `data` prop, so `isFavorited` changes.
+								// We just need to show the toast.
+								showToast = true;
+								// Hide the toast after 3 seconds.
+								setTimeout(() => {
+									showToast = false;
+								}, 3000);
+							};
+						}}
+					>
 						<button
 							type="submit"
 							class="bg-orange-600 text-white font-bold py-2 px-6 rounded-lg transition-colors hover:bg-orange-500 flex items-center gap-2"
@@ -58,30 +102,42 @@
 							<div class="flex items-center space-x-3 rtl:space-x-reverse">
 								<span class="text-xl font-semibold">الفصل #{chapter.chapter_number}</span>
 								{#if readChapterIds.has(chapter.id)}
-									<span class="text-xs bg-blue-500 text-white py-1 px-2 rounded-full">مقروء</span>
+									<span class="text-xs bg-blue-500 text-white py-1 px-2 rounded-full">مقروء</span
+									>
 								{/if}
 								{#if lastReadChapter?.id === chapter.id}
-									<span class="text-xs bg-green-500 text-white py-1 px-2 rounded-full">آخر قراءة</span>
+									<span class="text-xs bg-green-500 text-white py-1 px-2 rounded-full"
+										>آخر قراءة</span
+									>
 								{/if}
 							</div>
-							<span class="bg-orange-500 text-white text-sm font-bold py-1 px-3 rounded-full hidden sm:inline-block">اقرأ الآن</span>
+							<span
+								class="bg-orange-500 text-white text-sm font-bold py-1 px-3 rounded-full hidden sm:inline-block"
+								>اقرأ الآن</span
+							>
 						</a>
 					</li>
 				{:else}
 					<li class="p-6 text-center text-gray-400">لم تتم إضافة أي فصول لهذه المانجا بعد.</li>
 				{/each}
 			</ul>
+			<!-- Pagination for chapters -->
 			<div class="flex justify-center items-center space-x-4 mt-8 pb-6 text-white" dir="ltr">
 				<a
 					href="?page={chaptersResult.page - 1}"
-					class="py-2 px-4 bg-gray-700 rounded {chaptersResult.page === 1 ? 'opacity-50 pointer-events-none' : 'hover:bg-orange-600'}"
+					class="py-2 px-4 bg-gray-700 rounded {chaptersResult.page === 1
+						? 'opacity-50 pointer-events-none'
+						: 'hover:bg-orange-600'}"
 				>
 					&laquo; السابق
 				</a>
 				<span> صفحة {chaptersResult.page} من {chaptersResult.totalPages} </span>
 				<a
 					href="?page={chaptersResult.page + 1}"
-					class="py-2 px-4 bg-gray-700 rounded {chaptersResult.page === chaptersResult.totalPages ? 'opacity-50 pointer-events-none' : 'hover:bg-orange-600'}"
+					class="py-2 px-4 bg-gray-700 rounded {chaptersResult.page ===
+					chaptersResult.totalPages
+						? 'opacity-50 pointer-events-none'
+						: 'hover:bg-orange-600'}"
 				>
 					التالي &raquo;
 				</a>
