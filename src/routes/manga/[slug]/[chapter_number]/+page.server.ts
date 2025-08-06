@@ -19,32 +19,55 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 			} catch (err) { /* ignore */ }
 		}
 
-		const [pages, comments, nextChapter] = await Promise.all([
-			pb.collection('pages').getFullList({
-				filter: `chapter = "${chapter.id}"`,
-				sort: 'page_number'
-			}),
-			pb.collection('comments').getFullList({
-				filter: `chapter = "${chapter.id}"`,
-				sort: '-created',
-				expand: 'user'
-			}),
-            // ✨ التحسين: التحقق من وجود الفصل التالي ✨
-			pb.collection('chapters').getFirstListItem(`manga.id = "${manga.id}" && chapter_number = ${Number(params.chapter_number) + 1}`).catch(() => null)
-		]);
-		
-		pages.forEach((page) => {
-			page.page_image_url = pb.files.getURL(page, page.image_path);
-		});
+		// --- بداية التحسين لنظام التعليقات ---
+        const topLevelComments = await pb.collection('comments').getFullList({
+            filter: `chapter = "${chapter.id}" && parentComment = null`,
+            sort: '-created',
+            expand: 'user,likes'
+        });
 
-		return { 
-			user: locals.user || null, 
-			manga, 
-			chapter, 
-			pages, 
-			comments,
-            nextChapterExists: !!nextChapter // ✨ تمرير المعلومة للواجهة ✨
-		};
+        const replies = await pb.collection('comments').getFullList({
+            filter: `chapter = "${chapter.id}" && parentComment != null`,
+            sort: '+created',
+            expand: 'user,likes'
+        });
+
+        const commentsById = new Map();
+        topLevelComments.forEach(c => {
+            c.replies = [];
+            commentsById.set(c.id, c);
+        });
+        replies.forEach(r => {
+            const parent = commentsById.get(r.parentComment);
+            if (parent) {
+                parent.replies.push(r);
+            }
+        });
+
+        const comments = topLevelComments;
+        // --- نهاية التحسين ---
+
+        const [pages, nextChapter] = await Promise.all([
+            pb.collection('pages').getFullList({
+                filter: `chapter = "${chapter.id}"`,
+                sort: 'page_number'
+            }),
+            pb.collection('chapters').getFirstListItem(`manga.id = "${manga.id}" && chapter_number = ${Number(params.chapter_number) + 1}`).catch(() => null)
+        ]);
+        
+        pages.forEach((page) => {
+            page.page_image_url = pb.files.getURL(page, page.image_path);
+        });
+
+        return { 
+            user: locals.user || null, 
+            manga, 
+            chapter, 
+            pages, 
+            comments,
+            nextChapterExists: !!nextChapter
+        };
+
 	} catch (err) {
 		console.error("CRASH REPORT:", err);
 		throw error(404, 'المانجا أو الفصل المطلوب غير موجود');
@@ -52,33 +75,62 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 };
 
 export const actions: Actions = {
-	addComment: async ({ locals, request, params }) => {
-		if (!locals.user) {
-			throw redirect(303, '/login');
-		}
+    addComment: async ({ locals, request, params }) => {
+    if (!locals.user) {
+        throw redirect(303, '/login');
+    }
 
-		const data = await request.formData();
-		const rawContent = data.get('content') as string;
+    const data = await request.formData();
+    const rawContent = data.get('content') as string;
+    const parentId = data.get('parentId') as string | null; // <-- ✨ إضافة: استقبال parentId
 
-		if (!rawContent || rawContent.trim().length === 0) {
-			return fail(400, { error: 'لا يمكن أن يكون التعليق فارغًا.' });
-		}
-		
-        const content = purify.sanitize(rawContent);
+    if (!rawContent || rawContent.trim().length === 0) {
+        return fail(400, { error: 'لا يمكن أن يكون التعليق فارغًا.' });
+    }
+    
+    const content = purify.sanitize(rawContent);
+    
+    const manga = await pb.collection('mangas').getFirstListItem(`slug = "${params.slug}"`);
+    const chapter = await pb.collection('chapters').getFirstListItem(`manga.id = "${manga.id}" && chapter_number = ${params.chapter_number}`);
+
+    try {
+        await pb.collection('comments').create({
+            content,
+            user: locals.user.id,
+            chapter: chapter.id,
+            parentComment: parentId || null // <-- ✨ إضافة: حفظ parentId
+        });
+    } catch (err) {
+        return fail(500, { error: 'حدث خطأ ما أثناء إرسال التعليق.' });
+    }
+
+    return { success: true };
+},
+
+    toggleLike: async ({ locals, request }) => {
+        if (!locals.user) {
+            throw redirect(303, '/login');
+        }
+
+        const data = await request.formData();
+        const commentId = data.get('commentId') as string;
         
-		const manga = await pb.collection('mangas').getFirstListItem(`slug = "${params.slug}"`);
-		const chapter = await pb.collection('chapters').getFirstListItem(`manga.id = "${manga.id}" && chapter_number = ${params.chapter_number}`);
+        try {
+            // PocketBase يستخدم `+=` و `-=` لتعديل العلاقات المتعددة
+            await pb.collection('comments').update(commentId, {
+                'likes+': locals.user.id
+            });
+        } catch (err) {
+            // إذا كان المستخدم قد أعجب به بالفعل، سيحدث خطأ، لذا سنقوم بإزالة الإعجاب
+            try {
+                await pb.collection('comments').update(commentId, {
+                    'likes-': locals.user.id
+                });
+            } catch (innerErr) {
+                return fail(500, { error: 'فشل التفاعل مع التعليق.' });
+            }
+        }
 
-		try {
-			await pb.collection('comments').create({
-				content,
-				user: locals.user.id,
-				chapter: chapter.id
-			});
-		} catch (err) {
-			return fail(500, { error: 'حدث خطأ ما أثناء إرسال التعليق.' });
-		}
-
-		return { success: true };
-	}
+        return { success: true };
+    }
 };

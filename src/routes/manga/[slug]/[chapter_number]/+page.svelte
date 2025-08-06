@@ -6,6 +6,7 @@
 	import { onMount, onDestroy } from 'svelte';
     import { browser } from '$app/environment';
     import { PUBLIC_CDN_URL } from '$env/static/public';
+	import Comment from '$lib/components/Comment.svelte';
 	export let data: PageData;
 // svelte-ignore export_let_unused
     export let form: ActionData;
@@ -443,10 +444,10 @@
 </footer>
 	<section class="container mx-auto px-4 py-10">
 		<h2 class="mb-6 border-b-2 border-gray-700 pb-2 text-3xl font-bold text-white">
-			التعليقات ({comments.length})
-		</h2>
+			التعليقات ({comments.length}) </h2>
 		{#if user}
 			<form method="POST" action="?/addComment" class="mb-8">
+				<input type="hidden" name="parentId" value="" />
 				<div class="rounded-lg bg-gray-800 p-4">
 					<textarea
 						name="content"
@@ -476,34 +477,15 @@
 		{/if}
 		<div class="space-y-6">
 			{#each comments as comment}
-    <article class="flex space-x-4">
-        {#if comment.expand?.user}
-            <div class="flex-shrink-0">
-                <div
-                    class="flex h-12 w-12 items-center justify-center rounded-full bg-gray-700 font-bold text-white"
-                >
-                    {(comment.expand.user.username || '?').charAt(0).toUpperCase()}
-                </div>
-            </div>
-            <div class="flex-grow rounded-lg bg-gray-800 p-4">
-                <p class="font-bold text-orange-400">{comment.expand.user.username || 'مستخدم محذوف'}</p>
-                <div class="prose prose-invert mt-2 text-gray-300">
-                    {@html comment.content}
-                </div>
-            </div>
-        {/if}
-    </article>
-{:else}
-    <p class="text-center text-gray-400">لا توجد تعليقات بعد. كن أول من يعلق!</p>
-{/each}
-		</div>
+				<Comment {comment} {user} />
+			{:else}
+				<p class="text-center text-gray-400">لا توجد تعليقات بعد. كن أول من يعلق!</p>
+			{/each}
+			</div>
 	</section>
 </div>
 
 <style>
-	.prose {
-		max-width: none;
-	}
 
 	:global(:root:fullscreen .sticky-header) {
 		display: none;
