@@ -42,6 +42,18 @@ export const actions: Actions = {
 	addQuestion: async ({ locals, request, params }) => {
 		if (!locals.admin) throw redirect(303, '/');
 		const formData = await request.formData();
+
+		// ✨✨✨ بداية الإصلاح ✨✨✨
+		// 1. نحسب عدد الأسئلة الموجودة حاليًا في هذا الاختبار
+		const { totalItems } = await pb.collection('questions').getList(1, 1, {
+			filter: `quiz.id = "${params.quizId}"`
+		});
+		const newOrder = totalItems + 1;
+
+		// 2. نضيف رقم الترتيب الجديد إلى البيانات قبل إرسالها
+		formData.append('order', newOrder.toString());
+		// ✨✨✨ نهاية الإصلاح ✨✨✨
+
 		formData.append('quiz', params.quizId);
 
 		try {

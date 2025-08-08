@@ -27,30 +27,36 @@ export const actions: Actions = {
 		if (!locals.user) throw redirect(303, '/login');
 
 		const formData = await request.formData();
-		const userAnswers: { questionId: string; selectedOption: number }[] = JSON.parse(formData.get('answers') as string);
-		
+		const userAnswers: { questionId: string; selectedOption: number }[] = JSON.parse(
+			formData.get('answers') as string
+		);
+
+		let attemptRecordId: string; // ✨ 1. عرف متغيرًا هنا
+
 		try {
 			const quiz = await pb.collection('quizzes').getFirstListItem(`slug = "${params.slug}"`);
-			// جلب الأسئلة مع الإجابات الصحيحة من السيرفر للتصحيح الآمن
 			const correctQuestions = await pb.collection('questions').getFullList({
 				filter: `quiz.id = "${quiz.id}"`
 			});
-			
+
 			let score = 0;
 			const answerRecords = [];
 
 			for (const userAnswer of userAnswers) {
-				const question = correctQuestions.find(q => q.id === userAnswer.questionId);
+				const question = correctQuestions.find((q) => q.id === userAnswer.questionId);
 				if (question) {
 					const isCorrect = question.correct_option === userAnswer.selectedOption;
 					if (isCorrect) {
 						score++;
 					}
-					answerRecords.push({ question: question.id, selected_option: userAnswer.selectedOption, is_correct: isCorrect });
+					answerRecords.push({
+						question: question.id,
+						selected_option: userAnswer.selectedOption,
+						is_correct: isCorrect
+					});
 				}
 			}
 
-			// 1. إنشاء سجل المحاولة
 			const attemptRecord = await pb.collection('quiz_attempts').create({
 				user: locals.user.id,
 				quiz: quiz.id,
@@ -59,20 +65,24 @@ export const actions: Actions = {
 				completed_at: new Date().toISOString()
 			});
 
-			// 2. ربط إجابات المستخدم بالمحاولة
+			attemptRecordId = attemptRecord.id; // ✨ 2. احفظ الـ ID هنا
+
 			for (const record of answerRecords) {
 				await pb.collection('quiz_user_answers').create({
 					...record,
-					attempt: attemptRecord.id,
+					attempt: attemptRecord.id
 				});
 			}
 
-			// 3. إعادة التوجيه لصفحة النتيجة
-			throw redirect(303, `/quizzes/result/${attemptRecord.id}`);
-
+            // ✨ 3. أزل أمر إعادة التوجيه من هنا
+			
 		} catch (err) {
-			console.error("Quiz submission error:", err);
+			// الآن هذا الجزء سيلتقط الأخطاء الحقيقية فقط
+			console.error('Quiz submission REAL error:', err);
 			return fail(500, { error: 'حدث خطأ أثناء إرسال إجاباتك. حاول مرة أخرى.' });
 		}
+
+		// ✨ 4. ضع أمر إعادة التوجيه هنا، خارج الـ try...catch
+		throw redirect(303, `/quizzes/result/${attemptRecordId}`);
 	}
 };
