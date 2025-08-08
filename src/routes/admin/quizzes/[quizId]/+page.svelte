@@ -8,7 +8,6 @@
 
 	export let data: PageData;
 	export let form: ActionData;
-
 	// ✨ تحديث: استخدام المتغيرات الجديدة من دالة load
 	$: ({ quiz, quizQuestions, questionBank } = data);
 
@@ -22,11 +21,9 @@
 			window.history.replaceState({}, '', url);
 		}
 	});
-
 	let showAddQuestionForm = false;
 	let detailsMessage = '';
 	let questionMessage = '';
-
 	$: if (form?.success) {
 		if (form.type === 'details') {
 			detailsMessage = form.message || 'تم التحديث بنجاح!';
@@ -49,7 +46,6 @@
 		if (inQuiz) return false;
 		return !bankSearchTerm || q.text.toLowerCase().includes(bankSearchTerm.toLowerCase());
 	});
-
 	// دالة للتعامل مع التحديثات البصرية بعد إجراءات النماذج
 	const handleUpdate: SubmitFunction = () => {
 		return async ({ update }) => {
@@ -361,6 +357,18 @@
 							/>
 							<!-- svelte-ignore a11y_label_has_associated_control -->
 							<label class="flex-grow text-gray-200 cursor-pointer">{question.text}</label>
+							<div class="flex-shrink-0 flex gap-x-4">
+								<a href="/admin/quizzes/edit-question/{question.id}" class="text-blue-400 hover:underline text-xs">تعديل</a>
+								<!-- svelte-ignore node_invalid_placement_ssr -->
+								<form method="POST" action="?/deleteQuestion" use:enhance={handleUpdate} on:submit|preventDefault={(e) => {
+                                        if (!confirm('هل أنت متأكد من حذف هذا السؤال نهائياً من بنك الأسئلة؟')) {
+                                            e.preventDefault();
+                                        }
+                                    }}>
+									<input type="hidden" name="questionId" value={question.id} />
+									<button type="submit" class="text-red-400 hover:underline text-xs">حذف</button>
+								</form>
+							</div>
 						</div>
 					{:else}
 						<p class="text-center text-gray-400 py-8">
