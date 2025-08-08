@@ -9,10 +9,10 @@
 </svelte:head>
 
 <div class="p-8 font-[Tajawal]">
-	<div class="container mx-auto">
+	<div class="container mx-auto" dir="rtl" >
 		<h1 class="text-4xl font-bold mb-8 text-center text-orange-400">ساحة اختبارات Z</h1>
 		<p class="text-lg text-gray-300 text-center mb-12 max-w-2xl mx-auto">
-			هل تعتقد أنك تعرف كل شيء عن عالم دراغون بول؟ اختبر معلوماتك وأثبت أنك من نخبة المحاربين!
+			هل تعتقد أنك تعرف كل شيء عن عالم دراغون بول ؟ اختبر معلوماتك وأثبت أنك من نخبة المحاربين !
 		</p>
 
 		{#if data.quizzes.length > 0}

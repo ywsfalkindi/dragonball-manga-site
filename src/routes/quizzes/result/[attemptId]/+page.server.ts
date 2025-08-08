@@ -13,6 +13,9 @@ export const load: PageServerLoad = async ({ params }) => {
 		const userAnswers = await pb.collection('quiz_user_answers').getFullList({
 			filter: `attempt.id = "${params.attemptId}"`,
 			sort: 'created',
+			// ✨ التحسين: خاصية expand هنا تقوم بجلب كل بيانات السؤال تلقائيًا،
+			// بما في ذلك حقل "explanation" الجديد الذي أضفته في الخطوات السابقة.
+			// لذلك، لا حاجة لإجراء تعديلات منطقية هنا.
 			expand: 'question'
 		});
 

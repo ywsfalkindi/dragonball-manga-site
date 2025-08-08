@@ -98,14 +98,17 @@
 			<div>
 				<div class="mb-6">
 					<div class="flex justify-between items-center text-sm text-gray-400 mb-2">
-						{#if timeLeft !== null}
-							<span class="font-mono text-lg text-red-400">{formatTime(timeLeft)}</span>
-						{/if}
-						<p class="text-right">
-							السؤال {$quizStore.currentQuestionIndex + 1} / {$quizStore.questions.length}
-						</p>
-					</div>
-					<div class="w-full bg-gray-700 rounded-full h-2.5">
+    {#if timeLeft !== null}
+        <span class="font-mono text-lg text-red-400">{formatTime(timeLeft)}</span>
+    {:else}
+        <!-- svelte-ignore element_invalid_self_closing_tag -->
+        <div />
+    {/if}
+    <p class="text-right">
+        السؤال {$quizStore.currentQuestionIndex + 1} / {$quizStore.questions.length}
+    </p>
+</div>
+					<div class="w-full bg-gray-700 rounded-full h-2.5" dir="rtl">
 						<div class="bg-orange-500 h-2.5 rounded-full" style="width: {progress}%"></div>
 					</div>
 				</div>
@@ -132,9 +135,9 @@
 						currentQuestion.option_4
 					] as option, i}
 						<button
-							on:click={() => handleAnswer(i + 1)}
-							class="p-4 bg-gray-700 rounded-lg text-lg text-right hover:bg-orange-500 hover:text-white transition-colors duration-200"
-						>
+    on:click={() => handleAnswer(i + 1)}
+    class="p-4 bg-gray-700 rounded-lg text-lg text-center hover:bg-orange-500 hover:text-white transition-colors duration-200"
+>
 							{option}
 						</button>
 					{/each}

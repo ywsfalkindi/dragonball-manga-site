@@ -51,12 +51,23 @@ export const actions: Actions = {
 			const correctAnswersMap = new Map(correctQuestions.map((q) => [q.id, q.correct_option]));
 			let score = 0;
 			const answerRecords = [];
+            
+            // --- بداية التحسين: احتساب النقاط بناءً على السرعة ---
+            const timeLimit = quiz.time_limit || (correctQuestions.length * 15); // استخدم الوقت المحدد أو 15 ثانية لكل سؤال كقيمة افتراضية
 
 			for (const userAnswer of userAnswers) {
 				const correctAnswer = correctAnswersMap.get(userAnswer.questionId);
 				if (correctAnswer !== undefined) {
 					const isCorrect = correctAnswer === userAnswer.selectedOption;
-					if (isCorrect) score++;
+					if (isCorrect) {
+                        // 100 نقطة أساسية لكل إجابة صحيحة
+                        score += 100; 
+                        
+                        // نقاط إضافية بناءً على الوقت المتبقي لكل سؤال (بافتراض توزيع الوقت بالتساوي)
+                        const timePerQuestion = timeLimit / correctQuestions.length;
+                        const timeBonus = Math.max(0, Math.round(timePerQuestion - (timeTaken / correctQuestions.length)));
+                        score += timeBonus;
+                    }
 					answerRecords.push({
 						question: userAnswer.questionId,
 						selected_option: userAnswer.selectedOption,
@@ -64,17 +75,18 @@ export const actions: Actions = {
 					});
 				}
 			}
+            // --- نهاية التحسين ---
 
 			const attemptRecord = await pb.collection('quiz_attempts').create({
 				user: locals.user.id,
 				quiz: quiz.id,
-				score: score,
+				score: score, // حفظ النتيجة الجديدة
 				total_questions: correctQuestions.length,
 				completed_at: new Date().toISOString(),
 				time_taken: isNaN(timeTaken) ? null : timeTaken
 			});
 
-			// --- بداية الإصلاح: استخدام حلقة متسلسلة بدلاً من متزامنة ---
+			// استخدام حلقة متسلسلة بدلاً من متزامنة لتجنب الحمل الزائد على قاعدة البيانات
 			for (const record of answerRecords) {
 				await pb.collection('quiz_user_answers').create({
 					...record,
@@ -82,7 +94,6 @@ export const actions: Actions = {
 					user: locals.user.id
 				});
 			}
-			// --- نهاية الإصلاح ---
 
 			return { success: true, attemptId: attemptRecord.id };
 		} catch (err) {

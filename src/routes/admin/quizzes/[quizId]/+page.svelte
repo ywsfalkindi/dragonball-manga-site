@@ -4,7 +4,6 @@
 	import type { PageData, ActionData, SubmitFunction } from './$types';
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
-	// --- التحسين: استيراد مكتبة السحب والإفلات ---
 	import { dndzone } from 'svelte-dnd-action';
 	import { pb } from '$lib/pocketbase';
 
@@ -21,7 +20,6 @@
 			window.history.replaceState({}, '', url);
 		}
 	});
-
 	let questions = data.questions || [];
 	$: questions = data.questions;
 
@@ -41,13 +39,12 @@
 		}
 	}
 
-	// --- التحسين: دالة للتعامل مع انتهاء السحب والإفلات ---
 	function handleDndConsider(e: CustomEvent) {
 		questions = e.detail.items;
 	}
 	const handleEnhanceReorder: SubmitFunction = () => {
 		return async ({ update }) => {
-			await update({ reset: false }); // لا تقم بإعادة تعيين الفورم
+			await update({ reset: false });
 		};
 	};
 </script>
@@ -205,7 +202,7 @@
 				>
 					<div>
 						<label for="new_text" class="block mb-2">نص السؤال</label>
-						<input id="new_text" type="text" name="text" required class="w-full bg-gray-600 p-2 rounded" />
+						<input id="new_text" type="text" name="text" required class="w-full bg-gray-600 p-2 rounded" dir="rtl" />
 					</div>
 
 					<div>
@@ -246,6 +243,12 @@
 							<option value="4">الخيار 4</option>
 						</select>
 					</div>
+                    
+                    <div>
+                        <label for="new_explanation" class="block mb-2">شرح الإجابة (اختياري)</label>
+                        <textarea id="new_explanation" name="explanation" rows="2" class="w-full bg-gray-600 p-2 rounded" placeholder="اشرح لماذا هذه الإجابة هي الصحيحة..." dir="rtl"></textarea>
+                    </div>
+
 					<button type="submit" class="bg-blue-600 font-bold py-2 px-6 rounded">حفظ السؤال</button>
 				</form>
 			</div>
@@ -265,7 +268,7 @@
 			class="space-y-4"
 		>
 			{#each questions as question (question.id)}
-				<div class="bg-gray-700/50 p-4 rounded-lg cursor-grab active:cursor-grabbing">
+				<div class="bg-gray-700/50 p-4 rounded-lg cursor-grab active:cursor-grabbing" dir="rtl">
 					<details>
 						<summary class="cursor-pointer font-semibold text-right flex justify-between items-center">
 							<div class="flex items-center gap-4">
@@ -283,7 +286,7 @@
 
 								<div>
 									<label for="text-{question.id}" class="block mb-1 text-sm text-gray-300">نص السؤال</label>
-									<input type="text" id="text-{question.id}" name="text" value={question.text} class="w-full bg-gray-600 p-2 rounded text-right" />
+									<input type="text" id="text-{question.id}" name="text" bind:value={question.text} class="w-full bg-gray-600 p-2 rounded text-right" />
 								</div>
 								
 								<div>
@@ -294,31 +297,36 @@
 								<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 									<div>
 										<label for="option_1-{question.id}" class="block mb-1 text-sm text-gray-300">الخيار 1</label>
-										<input type="text" id="option_1-{question.id}" name="option_1" value={question.option_1} class="w-full bg-gray-600 p-2 rounded text-right" />
+										<input type="text" id="option_1-{question.id}" name="option_1" bind:value={question.option_1} class="w-full bg-gray-600 p-2 rounded text-right" />
 									</div>
 									<div>
 										<label for="option_2-{question.id}" class="block mb-1 text-sm text-gray-300">الخيار 2</label>
-										<input type="text" id="option_2-{question.id}" name="option_2" value={question.option_2} class="w-full bg-gray-600 p-2 rounded text-right" />
+										<input type="text" id="option_2-{question.id}" name="option_2" bind:value={question.option_2} class="w-full bg-gray-600 p-2 rounded text-right" />
 									</div>
 									<div>
 										<label for="option_3-{question.id}" class="block mb-1 text-sm text-gray-300">الخيار 3</label>
-										<input type="text" id="option_3-{question.id}" name="option_3" value={question.option_3} class="w-full bg-gray-600 p-2 rounded text-right" />
+										<input type="text" id="option_3-{question.id}" name="option_3" bind:value={question.option_3} class="w-full bg-gray-600 p-2 rounded text-right" />
 									</div>
 									<div>
 										<label for="option_4-{question.id}" class="block mb-1 text-sm text-gray-300">الخيار 4</label>
-										<input type="text" id="option_4-{question.id}" name="option_4" value={question.option_4} class="w-full bg-gray-600 p-2 rounded text-right" />
+										<input type="text" id="option_4-{question.id}" name="option_4" bind:value={question.option_4} class="w-full bg-gray-600 p-2 rounded text-right" />
 									</div>
 								</div>
 
 								<div>
 									<label for="correct_option-{question.id}" class="block mb-1 text-sm text-gray-300">الإجابة الصحيحة</label>
-									<select id="correct_option-{question.id}" name="correct_option" class="w-full bg-gray-600 p-2 rounded">
-										<option value="1" selected={question.correct_option === 1}>الخيار 1</option>
-										<option value="2" selected={question.correct_option === 2}>الخيار 2</option>
-										<option value="3" selected={question.correct_option === 3}>الخيار 3</option>
-										<option value="4" selected={question.correct_option === 4}>الخيار 4</option>
+									<select id="correct_option-{question.id}" name="correct_option" bind:value={question.correct_option} class="w-full bg-gray-600 p-2 rounded">
+										<option value={1}>الخيار 1</option>
+										<option value={2}>الخيار 2</option>
+										<option value={3}>الخيار 3</option>
+										<option value={4}>الخيار 4</option>
 									</select>
 								</div>
+                                
+                                <div>
+                                    <label for="explanation-{question.id}" class="block mb-1 text-sm text-gray-300">شرح الإجابة</label>
+                                    <textarea id="explanation-{question.id}" name="explanation" rows="2" class="w-full bg-gray-600 p-2 rounded text-right" bind:value={question.explanation}></textarea>
+                                </div>
 
 								<div class="flex justify-end items-center mt-4">
 									<button type="submit" class="bg-blue-600 text-sm py-1 px-3 rounded hover:bg-blue-700">حفظ التعديلات</button>

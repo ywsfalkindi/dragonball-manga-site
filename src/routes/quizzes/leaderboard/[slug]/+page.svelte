@@ -78,9 +78,9 @@
 					{/each}
 				</ul>
 			{:else}
-				<div class="p-16 text-center">
-					<p class="text-2xl text-gray-400">لوحة الصدارة فارغة حاليًا.</p>
-					<p class="text-gray-500 mt-2">كن أول من ينهي هذا التحدي ويسجل اسمه هنا!</p>
+				<div class="p-16 text-center" dir="rtl" >
+					<p class="text-2xl text-gray-400">لوحة الصدارة فارغة حالياً</p>
+					<p class="text-gray-500 mt-2">كن أول من ينهي هذا التحدي ويسجل اسمه هنا !</p>
 					<a
 						href="/quizzes/{data.quiz.slug}"
 						class="mt-6 inline-block bg-orange-600 text-white font-bold py-2 px-6 rounded-lg transition-colors hover:bg-orange-500"

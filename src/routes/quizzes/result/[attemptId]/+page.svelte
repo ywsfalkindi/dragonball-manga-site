@@ -4,8 +4,8 @@
 	export let data: PageData;
 
 	$: attempt = data.attempt;
-	$: percentage = attempt.total_questions > 0 ? (attempt.score / attempt.total_questions) * 100 : 0;
-
+	$: correctAnswersCount = data.userAnswers.filter(answer => answer.is_correct).length;
+	$: percentage = attempt.total_questions > 0 ? (correctAnswersCount / attempt.total_questions) * 100 : 0;
 	let showReview = false;
 
 	function getOptionText(question: any, optionNumber: number) {
@@ -50,13 +50,11 @@
 		<h2 class="text-4xl font-bold text-orange-400 mb-8">{attempt.expand?.quiz.title}</h2>
 
 		<div class="mb-8">
-			<p class="text-lg text-gray-400">لقد أجبت بشكل صحيح على</p>
+			<p class="text-lg text-gray-400">لقد حصلت على</p>
 			<p class="text-7xl font-bold my-4">
 				<span class="text-green-400">{attempt.score}</span>
-				<span class="text-gray-500">/</span>
-				<span class="text-gray-400">{attempt.total_questions}</span>
 			</p>
-			<p class="text-lg text-gray-400">أسئلة</p>
+			<p class="text-lg text-gray-400">نقطة</p>
 		</div>
 
 		<div class="w-full bg-gray-700 rounded-full h-4 mb-4">
@@ -108,8 +106,8 @@
 			{#each data.userAnswers as userAnswer (userAnswer.id)}
 				{@const question = userAnswer.expand?.question}
 				{#if question}
-					<div class="bg-gray-700/50 p-4 rounded-lg">
-						<p class="text-lg font-semibold mb-4">{question.text}</p>
+					<div class="bg-gray-700/50 p-4 rounded-lg" dir="rtl">
+						<p class="text-lg font-semibold mb-4" dir="rtl" >{question.text}</p>
 						<div class="space-y-2">
 							{#each [1, 2, 3, 4] as optionNum}
 								{@const isUserAnswer = userAnswer.selected_option === optionNum}
@@ -134,6 +132,12 @@
 								</div>
 							{/each}
 						</div>
+						{#if question.explanation}
+    <div class="mt-4 pt-4 border-t border-gray-600">
+        <p class="text-sm text-cyan-300 font-semibold" dir="rtl" >توضيح :</p>
+        <p class="text-sm text-gray-300 leading-relaxed" dir="rtl">{question.explanation}</p>
+    </div>
+{/if}
 					</div>
 				{/if}
 			{/each}

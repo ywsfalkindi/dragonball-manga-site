@@ -29,8 +29,6 @@ export const actions: Actions = {
 		if (!locals.admin) throw redirect(303, '/');
 		const formData = await request.formData();
 		
-		// --- بداية الإصلاح ---
-		// 1. إنشاء كائن بيانات نظيف بدلاً من تمرير formData مباشرة
 		const dataToUpdate: { [key: string]: any } = {
 			title: formData.get('title'),
 			slug: formData.get('slug'),
@@ -38,17 +36,12 @@ export const actions: Actions = {
 			published: formData.get('published') === 'true'
 		};
 
-		// 2. معالجة مدة الاختبار بشكل دقيق
 		const timeLimitRaw = formData.get('time_limit') as string;
 		const timeLimit = parseInt(timeLimitRaw, 10);
 		
-		// إذا كان الإدخال فارغاً أو غير رقمي، قم بتعيينه إلى null (بلا وقت)
-		// وإلا، استخدم القيمة الرقمية
 		dataToUpdate.time_limit = !isNaN(timeLimit) && timeLimit > 0 ? timeLimit : null;
-		// --- نهاية الإصلاح ---
 
 		try {
-			// 3. تحديث قاعدة البيانات باستخدام الكائن النظيف
 			await pb.collection('quizzes').update(params.quizId, dataToUpdate);
 			return { type: 'details', success: true, message: 'تم تحديث تفاصيل الاختبار.' };
 		} catch (err) {
@@ -79,12 +72,23 @@ export const actions: Actions = {
 		const { totalItems } = await pb.collection('questions').getList(1, 1, {
 			filter: `quiz.id = "${params.quizId}"`
 		});
-		const newOrder = totalItems + 1;
-		formData.append('order', newOrder.toString());
-		formData.append('quiz', params.quizId);
+		
+		// ✨ التحسين: بناء كائن بيانات نظيف بدلاً من تمرير formData مباشرة ✨
+		const dataToCreate = {
+			quiz: params.quizId,
+			order: totalItems + 1,
+			text: formData.get('text'),
+			image: formData.get('image'),
+			option_1: formData.get('option_1'),
+			option_2: formData.get('option_2'),
+			option_3: formData.get('option_3'),
+			option_4: formData.get('option_4'),
+			correct_option: formData.get('correct_option'),
+			explanation: formData.get('explanation') || '' // استقبال قيمة الشرح
+		};
 
 		try {
-			await pb.collection('questions').create(formData);
+			await pb.collection('questions').create(dataToCreate);
 			return { type: 'question', success: true, message: 'تمت إضافة السؤال.' };
 		} catch (err) {
 			console.error(err);
@@ -96,10 +100,21 @@ export const actions: Actions = {
 		if (!locals.admin) throw redirect(303, '/');
 		const formData = await request.formData();
 		const questionId = formData.get('questionId') as string;
-		formData.delete('questionId');
 
+		// ✨ التحسين: بناء كائن بيانات نظيف لتمريره إلى دالة التحديث ✨
+		const dataToUpdate = {
+			text: formData.get('text'),
+			image: formData.get('image'),
+			option_1: formData.get('option_1'),
+			option_2: formData.get('option_2'),
+			option_3: formData.get('option_3'),
+			option_4: formData.get('option_4'),
+			correct_option: formData.get('correct_option'),
+			explanation: formData.get('explanation') || '' // استقبال قيمة الشرح للتحديث
+		};
+		
 		try {
-			await pb.collection('questions').update(questionId, formData);
+			await pb.collection('questions').update(questionId, dataToUpdate);
 			return { type: 'question', success: true, message: 'تم تحديث السؤال.' };
 		} catch (err) {
 			return fail(400, { type: 'question', success: false, message: 'فشل تحديث السؤال.' });
