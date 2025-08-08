@@ -8,13 +8,16 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 	const quizId = params.quizId;
 
 	try {
-		// جلب الاختبار مع أسئلته المرتبطة به
 		const quiz = await pb.collection('quizzes').getOne(quizId);
+		if (quiz.cover_image) {
+			quiz.cover_image_url = pb.files.getURL(quiz, quiz.cover_image);
+		}
+
 		const questions = await pb.collection('questions').getFullList({
 			filter: `quiz.id = "${quizId}"`,
 			sort: 'order'
 		});
-		
+
 		return { quiz, questions };
 	} catch (err) {
 		throw error(404, 'الاختبار غير موجود.');
@@ -22,38 +25,62 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 };
 
 export const actions: Actions = {
-	// Action لتحديث بيانات الاختبار الأساسية
 	updateQuizDetails: async ({ locals, request, params }) => {
 		if (!locals.admin) throw redirect(303, '/');
 		const formData = await request.formData();
-		// تحويل checkbox إلى قيمة boolean صحيحة
-		const published = formData.get('published') === 'true';
-		formData.set('published', published.toString());
+		
+		// --- بداية الإصلاح ---
+		// 1. إنشاء كائن بيانات نظيف بدلاً من تمرير formData مباشرة
+		const dataToUpdate: { [key: string]: any } = {
+			title: formData.get('title'),
+			slug: formData.get('slug'),
+			description: formData.get('description'),
+			published: formData.get('published') === 'true'
+		};
+
+		// 2. معالجة مدة الاختبار بشكل دقيق
+		const timeLimitRaw = formData.get('time_limit') as string;
+		const timeLimit = parseInt(timeLimitRaw, 10);
+		
+		// إذا كان الإدخال فارغاً أو غير رقمي، قم بتعيينه إلى null (بلا وقت)
+		// وإلا، استخدم القيمة الرقمية
+		dataToUpdate.time_limit = !isNaN(timeLimit) && timeLimit > 0 ? timeLimit : null;
+		// --- نهاية الإصلاح ---
 
 		try {
-			await pb.collection('quizzes').update(params.quizId, formData);
+			// 3. تحديث قاعدة البيانات باستخدام الكائن النظيف
+			await pb.collection('quizzes').update(params.quizId, dataToUpdate);
 			return { type: 'details', success: true, message: 'تم تحديث تفاصيل الاختبار.' };
 		} catch (err) {
 			return fail(400, { type: 'details', success: false, message: 'فشل تحديث التفاصيل.' });
 		}
 	},
 
-	// Action لإضافة سؤال جديد للاختبار الحالي
+	updateQuizCoverImage: async ({ locals, request, params }) => {
+		if (!locals.admin) throw redirect(303, '/');
+		const formData = await request.formData();
+
+		try {
+			await pb.collection('quizzes').update(params.quizId, formData);
+			return { type: 'details', success: true, message: 'تم تحديث صورة الغلاف.' };
+		} catch (err) {
+			return fail(400, {
+				type: 'details',
+				success: false,
+				message: 'فشل تحديث صورة الغلاف.'
+			});
+		}
+	},
+
 	addQuestion: async ({ locals, request, params }) => {
 		if (!locals.admin) throw redirect(303, '/');
 		const formData = await request.formData();
 
-		// ✨✨✨ بداية الإصلاح ✨✨✨
-		// 1. نحسب عدد الأسئلة الموجودة حاليًا في هذا الاختبار
 		const { totalItems } = await pb.collection('questions').getList(1, 1, {
 			filter: `quiz.id = "${params.quizId}"`
 		});
 		const newOrder = totalItems + 1;
-
-		// 2. نضيف رقم الترتيب الجديد إلى البيانات قبل إرسالها
 		formData.append('order', newOrder.toString());
-		// ✨✨✨ نهاية الإصلاح ✨✨✨
-
 		formData.append('quiz', params.quizId);
 
 		try {
@@ -64,13 +91,12 @@ export const actions: Actions = {
 			return fail(400, { type: 'question', success: false, message: 'فشلت إضافة السؤال.' });
 		}
 	},
-    
-    // Action لتحديث سؤال موجود
+
 	updateQuestion: async ({ locals, request }) => {
 		if (!locals.admin) throw redirect(303, '/');
 		const formData = await request.formData();
-        const questionId = formData.get('questionId') as string;
-        formData.delete('questionId'); // إزالته قبل التحديث
+		const questionId = formData.get('questionId') as string;
+		formData.delete('questionId');
 
 		try {
 			await pb.collection('questions').update(questionId, formData);
@@ -80,7 +106,6 @@ export const actions: Actions = {
 		}
 	},
 
-	// Action لحذف سؤال
 	deleteQuestion: async ({ locals, request }) => {
 		if (!locals.admin) throw redirect(303, '/');
 		const formData = await request.formData();
@@ -91,6 +116,27 @@ export const actions: Actions = {
 			return { type: 'question', success: true, message: 'تم حذف السؤال.' };
 		} catch (err) {
 			return fail(400, { type: 'question', success: false, message: 'فشل حذف السؤال.' });
+		}
+	},
+
+	reorderQuestions: async ({ locals, request }) => {
+		if (!locals.admin) throw redirect(303, '/');
+		const formData = await request.formData();
+		const questionIds = (formData.get('order') as string).split(',');
+
+		try {
+			await Promise.all(
+				questionIds.map((id, index) =>
+					pb.collection('questions').update(id, { order: index + 1 })
+				)
+			);
+			return { type: 'question', success: true, message: 'تم تحديث ترتيب الأسئلة.' };
+		} catch (err) {
+			return fail(400, {
+				type: 'question',
+				success: false,
+				message: 'فشل تحديث ترتيب الأسئلة.'
+			});
 		}
 	}
 };

@@ -9,9 +9,10 @@ export const load: PageServerLoad = async ({ params }) => {
 			expand: 'quiz,user'
 		});
 
-		// (اختياري، لكنه رائع) جلب إجابات المستخدم لمقارنتها
+		// جلب إجابات المستخدم لمقارنتها وعرضها في قسم المراجعة
 		const userAnswers = await pb.collection('quiz_user_answers').getFullList({
 			filter: `attempt.id = "${params.attemptId}"`,
+			sort: 'created',
 			expand: 'question'
 		});
 

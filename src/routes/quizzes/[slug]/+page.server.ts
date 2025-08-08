@@ -7,13 +7,22 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	if (!locals.user) throw redirect(303, '/login?redirect=/quizzes/' + params.slug);
 
 	try {
-		const quiz = await pb.collection('quizzes').getFirstListItem(`slug = "${params.slug}" && published = true`);
-		
-		// جلب الأسئلة بدون الإجابات الصحيحة للواجهة الأمامية
+		const quiz = await pb
+			.collection('quizzes')
+			.getFirstListItem(`slug = "${params.slug}" && published = true`, {
+				fields: 'id,collectionId,title,slug,time_limit'
+			});
+
 		const questions = await pb.collection('questions').getFullList({
 			filter: `quiz.id = "${quiz.id}"`,
-			sort: 'order',
-			fields: 'id,text,option_1,option_2,option_3,option_4,order' // لا نرسل `correct_option`
+			sort: '@random',
+			fields: 'id,text,option_1,option_2,option_3,option_4,order,image'
+		});
+
+		questions.forEach((q) => {
+			if (q.image) {
+				q.imageUrl = pb.files.getURL(q, q.image);
+			}
 		});
 
 		return { quiz, questions };
@@ -30,27 +39,26 @@ export const actions: Actions = {
 		const userAnswers: { questionId: string; selectedOption: number }[] = JSON.parse(
 			formData.get('answers') as string
 		);
-
-		let attemptRecordId: string; // ✨ 1. عرف متغيرًا هنا
+		const timeTaken = parseInt(formData.get('time_taken') as string, 10);
 
 		try {
 			const quiz = await pb.collection('quizzes').getFirstListItem(`slug = "${params.slug}"`);
 			const correctQuestions = await pb.collection('questions').getFullList({
-				filter: `quiz.id = "${quiz.id}"`
+				filter: `quiz.id = "${quiz.id}"`,
+				fields: 'id,correct_option'
 			});
 
+			const correctAnswersMap = new Map(correctQuestions.map((q) => [q.id, q.correct_option]));
 			let score = 0;
 			const answerRecords = [];
 
 			for (const userAnswer of userAnswers) {
-				const question = correctQuestions.find((q) => q.id === userAnswer.questionId);
-				if (question) {
-					const isCorrect = question.correct_option === userAnswer.selectedOption;
-					if (isCorrect) {
-						score++;
-					}
+				const correctAnswer = correctAnswersMap.get(userAnswer.questionId);
+				if (correctAnswer !== undefined) {
+					const isCorrect = correctAnswer === userAnswer.selectedOption;
+					if (isCorrect) score++;
 					answerRecords.push({
-						question: question.id,
+						question: userAnswer.questionId,
 						selected_option: userAnswer.selectedOption,
 						is_correct: isCorrect
 					});
@@ -62,27 +70,24 @@ export const actions: Actions = {
 				quiz: quiz.id,
 				score: score,
 				total_questions: correctQuestions.length,
-				completed_at: new Date().toISOString()
+				completed_at: new Date().toISOString(),
+				time_taken: isNaN(timeTaken) ? null : timeTaken
 			});
 
-			attemptRecordId = attemptRecord.id; // ✨ 2. احفظ الـ ID هنا
-
+			// --- بداية الإصلاح: استخدام حلقة متسلسلة بدلاً من متزامنة ---
 			for (const record of answerRecords) {
 				await pb.collection('quiz_user_answers').create({
 					...record,
-					attempt: attemptRecord.id
+					attempt: attemptRecord.id,
+					user: locals.user.id
 				});
 			}
+			// --- نهاية الإصلاح ---
 
-            // ✨ 3. أزل أمر إعادة التوجيه من هنا
-			
+			return { success: true, attemptId: attemptRecord.id };
 		} catch (err) {
-			// الآن هذا الجزء سيلتقط الأخطاء الحقيقية فقط
 			console.error('Quiz submission REAL error:', err);
 			return fail(500, { error: 'حدث خطأ أثناء إرسال إجاباتك. حاول مرة أخرى.' });
 		}
-
-		// ✨ 4. ضع أمر إعادة التوجيه هنا، خارج الـ try...catch
-		throw redirect(303, `/quizzes/result/${attemptRecordId}`);
 	}
 };
