@@ -104,22 +104,28 @@
 	</div>
 
 	<div class="mt-12">
-		<h2 class="text-2xl font-bold mb-4 text-right">أدوات المحتوى</h2>
-		<div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-800 p-4 rounded-lg text-right">
-			<a href="/admin/mangas" class="block p-4 hover:bg-gray-700 rounded-lg">
-				<h3 class="text-xl font-bold text-blue-400">إدارة المانجا</h3>
-				<p class="text-gray-400 mt-1">إضافة، تعديل، وحذف المانجا والفصول.</p>
-			</a>
-			<a href="/admin/add-chapter" class="block p-4 hover:bg-gray-700 rounded-lg">
-				<h3 class="text-xl font-bold text-green-400">إضافة فصل جديد</h3>
-				<p class="text-gray-400">أداة لإضافة فصل كامل بصفحاته تلقائيًا.</p>
-			</a>
-			<a href="/admin/media" class="block p-4 hover:bg-gray-700 rounded-lg">
-				<h3 class="text-xl font-bold text-yellow-400">إدارة الوسائط</h3>
-				<p class="text-gray-400 mt-1">عرض الصور المرفوعة وحذف غير المستخدم منها.</p>
-			</a>
-		</div>
-	</div>
+    <h2 class="text-2xl font-bold mb-4 text-right">أدوات المحتوى</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-800 p-4 rounded-lg text-right">
+        
+        <a href="/admin/quizzes" class="block p-4 hover:bg-gray-700 rounded-lg">
+            <h3 class="text-xl font-bold text-cyan-400">إدارة الاختبارات</h3>
+            <p class="text-gray-400 mt-1">إضافة وتعديل وحذف الاختبارات وأسئلتها.</p>
+        </a>
+
+        <a href="/admin/mangas" class="block p-4 hover:bg-gray-700 rounded-lg">
+            <h3 class="text-xl font-bold text-blue-400">إدارة المانجا</h3>
+            <p class="text-gray-400 mt-1">إضافة، تعديل، وحذف المانجا والفصول.</p>
+        </a>
+        <a href="/admin/add-chapter" class="block p-4 hover:bg-gray-700 rounded-lg">
+            <h3 class="text-xl font-bold text-green-400">إضافة فصل جديد</h3>
+            <p class="text-gray-400">أداة لإضافة فصل كامل بصفحاته تلقائيًا.</p>
+        </a>
+        <a href="/admin/media" class="block p-4 hover:bg-gray-700 rounded-lg">
+            <h3 class="text-xl font-bold text-yellow-400">إدارة الوسائط</h3>
+            <p class="text-gray-400 mt-1">عرض الصور المرفوعة وحذف غير المستخدم منها.</p>
+        </a>
+    </div>
+</div>
 
 	<div class="mt-12">
 		<h2 class="text-2xl font-bold mb-4 text-right">إدارة الموقع</h2>

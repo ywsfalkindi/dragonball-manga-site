@@ -37,27 +37,30 @@
 
 <div class="min-h-screen bg-gray-900 text-white font-[Tajawal]">
     <nav class="bg-gray-800 text-white p-4 shadow-md sticky top-0 z-50">
-        <div class="container mx-auto flex justify-between items-center flex-wrap gap-4">
-            <a href="/" class="text-2xl font-bold text-orange-500 hover:text-orange-400">
-                موقع دراغون بول
-            </a>
-            <div class="text-sm">
-          
-                 {#if data.user}
-                    <div class="flex items-center gap-x-4">
-                        <span class="hidden sm:inline">أهلاً بك، {data.user.username}</span>
-                        <a href="/profile" class="py-2 px-4 bg-orange-600 rounded hover:bg-orange-700 whitespace-nowrap">ملفي الشخصي</a>
-          
-                     </div>
-                {:else}
-                    <div class="flex items-center gap-x-2">
-                        <a href="/login" class="py-2 px-4 hover:bg-gray-700 rounded whitespace-nowrap">تسجيل الدخول</a>
-                    
-                         <a href="/signup" class="py-2 px-4 bg-orange-600 rounded hover:bg-orange-700 whitespace-nowrap">إنشاء حساب</a>
-                    </div>
-                {/if}
-            </div>
+    <div class="container mx-auto flex justify-between items-center flex-wrap gap-4">
+        <a href="/" class="text-2xl font-bold text-orange-500 hover:text-orange-400">
+            موقع دراغون بول
+        </a>
+
+        <div class="flex items-center gap-x-4 md:gap-x-6 text-sm md:text-base">
+            
+            <a href="/quizzes" class="font-semibold hover:text-orange-400 transition-colors">الاختبارات</a>
+
+            <div class="w-px h-6 bg-gray-600 hidden sm:block"></div>
+
+            {#if data.user}
+                <div class="flex items-center gap-x-4">
+                    <span class="hidden sm:inline">أهلاً بك، {data.user.username}</span>
+                    <a href="/profile" class="py-2 px-4 bg-orange-600 rounded hover:bg-orange-700 whitespace-nowrap">ملفي الشخصي</a>
+                </div>
+            {:else}
+                <div class="flex items-center gap-x-2">
+                    <a href="/login" class="py-2 px-4 hover:bg-gray-700 rounded whitespace-nowrap">تسجيل الدخول</a>
+                    <a href="/signup" class="py-2 px-4 bg-orange-600 rounded hover:bg-orange-700 whitespace-nowrap">إنشاء حساب</a>
+                </div>
+            {/if}
         </div>
-    </nav>
+    </div>
+</nav>
     <slot />
 </div>
