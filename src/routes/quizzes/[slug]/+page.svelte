@@ -4,9 +4,7 @@
 	import { quizStore } from '$lib/stores/quiz';
 	import type { PageData, ActionData } from './$types';
 	import type { Question } from '$lib/stores/quiz';
-	// --- بداية الإصلاح: استيراد دالة goto ---
 	import { goto } from '$app/navigation';
-	// --- نهاية الإصلاح ---
 
 	export let data: PageData;
 	export let form: ActionData;
@@ -14,6 +12,8 @@
 	let timeLeft: number | null = data.quiz.time_limit || null;
 	let timerInterval: any;
 	let startTime: number;
+	// ✨ تحسين: متغير لتتبع الإجابات المتتالية الصحيحة
+	let correctStreak = 0;
 
 	function formatTime(seconds: number): string {
 		const minutes = Math.floor(seconds / 60);
@@ -45,14 +45,12 @@
 			clearInterval(timerInterval);
 		};
 	});
-
 	$: if ($quizStore.isCompleted && timerInterval) {
 		clearInterval(timerInterval);
 	}
 
 	$: currentQuestion = $quizStore.questions[$quizStore.currentQuestionIndex];
 	$: progress = (($quizStore.currentQuestionIndex + 1) / $quizStore.questions.length) * 100;
-
 	function handleAnswer(optionIndex: number) {
 		if ($quizStore.isCompleted) return;
 		quizStore.answerQuestion(currentQuestion.id, optionIndex);
@@ -98,18 +96,19 @@
 			<div>
 				<div class="mb-6">
 					<div class="flex justify-between items-center text-sm text-gray-400 mb-2">
-    {#if timeLeft !== null}
-        <span class="font-mono text-lg text-red-400">{formatTime(timeLeft)}</span>
-    {:else}
-        <!-- svelte-ignore element_invalid_self_closing_tag -->
-        <div />
-    {/if}
-    <p class="text-right">
-        السؤال {$quizStore.currentQuestionIndex + 1} / {$quizStore.questions.length}
-    </p>
-</div>
+						{#if timeLeft !== null}
+							<span class="font-mono text-lg text-red-400">{formatTime(timeLeft)}</span>
+						{:else}
+							<!-- svelte-ignore element_invalid_self_closing_tag -->
+							<div />
+						{/if}
+						<p class="text-right">
+							السؤال {$quizStore.currentQuestionIndex + 1} / {$quizStore.questions.length}
+						</p>
+					</div>
 					<div class="w-full bg-gray-700 rounded-full h-2.5" dir="rtl">
-						<div class="bg-orange-500 h-2.5 rounded-full" style="width: {progress}%"></div>
+						<!-- svelte-ignore element_invalid_self_closing_tag -->
+						<div class="bg-orange-500 h-2.5 rounded-full" style="width: {progress}%" />
 					</div>
 				</div>
 
@@ -127,21 +126,33 @@
 					{currentQuestion.text}
 				</h2>
 
-				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-					{#each [
-						currentQuestion.option_1,
-						currentQuestion.option_2,
-						currentQuestion.option_3,
-						currentQuestion.option_4
-					] as option, i}
+				{#if currentQuestion.type === 'true_false'}
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<button
-    on:click={() => handleAnswer(i + 1)}
-    class="p-4 bg-gray-700 rounded-lg text-lg text-center hover:bg-orange-500 hover:text-white transition-colors duration-200"
->
-							{option}
+							on:click={() => handleAnswer(1)}
+							class="p-4 bg-gray-700 rounded-lg text-lg text-center hover:bg-green-500 hover:text-white transition-colors duration-200"
+						>
+							{currentQuestion.option_1}
 						</button>
-					{/each}
-				</div>
+						<button
+							on:click={() => handleAnswer(2)}
+							class="p-4 bg-gray-700 rounded-lg text-lg text-center hover:bg-red-500 hover:text-white transition-colors duration-200"
+						>
+							{currentQuestion.option_2}
+						</button>
+					</div>
+				{:else}
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+						{#each [currentQuestion.option_1, currentQuestion.option_2, currentQuestion.option_3, currentQuestion.option_4] as option, i}
+							<button
+								on:click={() => handleAnswer(i + 1)}
+								class="p-4 bg-gray-700 rounded-lg text-lg text-center hover:bg-orange-500 hover:text-white transition-colors duration-200"
+							>
+								{option}
+							</button>
+						{/each}
+					</div>
+				{/if}
 			</div>
 		{/if}
 	</div>

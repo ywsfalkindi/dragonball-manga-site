@@ -1,13 +1,17 @@
 <script lang="ts">
 	import { slide } from 'svelte/transition';
 	import type { PageData } from './$types';
+	// ✨ تحسين: استيراد page store للوصول إلى رابط الصفحة الحالي
+	import { page } from '$app/stores';
+
 	export let data: PageData;
-
 	$: attempt = data.attempt;
-	$: correctAnswersCount = data.userAnswers.filter(answer => answer.is_correct).length;
-	$: percentage = attempt.total_questions > 0 ? (correctAnswersCount / attempt.total_questions) * 100 : 0;
+	$: correctAnswersCount = data.userAnswers.filter((answer) => answer.is_correct).length;
+	$: percentage =
+		attempt.total_questions > 0
+			? (correctAnswersCount / attempt.total_questions) * 100
+			: 0;
 	let showReview = false;
-
 	function getOptionText(question: any, optionNumber: number) {
 		switch (optionNumber) {
 			case 1:
@@ -34,6 +38,10 @@
 		}
 		return `${remainingSeconds} ثانية`;
 	}
+
+	// ✨ تحسين: إعداد نص ورابط المشاركة
+	$: shareText = `لقد حصلت على ${attempt.score} نقطة في اختبار "${attempt.expand?.quiz.title}"! هل يمكنك تحقيق نتيجة أفضل؟`;
+	$: shareUrl = $page.url.href;
 </script>
 
 <svelte:head>
@@ -58,18 +66,51 @@
 		</div>
 
 		<div class="w-full bg-gray-700 rounded-full h-4 mb-4">
+			<!-- svelte-ignore element_invalid_self_closing_tag -->
 			<div
 				class="bg-green-500 h-4 rounded-full"
 				style="width: {percentage}%"
 				title="دقتك: {percentage.toFixed(1)}%"
-			></div>
+			/>
 		</div>
 
 		{#if attempt.time_taken}
 			<p class="text-sm text-gray-400 mb-8">الوقت المستغرق: {formatTime(attempt.time_taken)}</p>
 		{/if}
 
-		<div class="flex justify-center gap-4 mt-12 flex-wrap">
+		<div class="mt-10 pt-6 border-t border-gray-700">
+			<h3 class="text-lg font-semibold text-gray-300 mb-4">شارك نتيجتك مع أصدقائك!</h3>
+			<div class="flex justify-center items-center gap-4">
+				<a
+					href="https://twitter.com/intent/tweet?text={encodeURIComponent(shareText)}&url={encodeURIComponent(shareUrl)}"
+					target="_blank"
+					rel="noopener noreferrer"
+					class="w-12 h-12 flex items-center justify-center rounded-full bg-[#1DA1F2] hover:bg-[#1a91da] transition-colors"
+					aria-label="شارك على تويتر"
+				>
+					<svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+						<path
+							d="M23.643 4.937c-.835.37-1.732.62-2.675.733.962-.576 1.7-1.49 2.048-2.578-.9.534-1.897.922-2.958 1.13-.85-.904-2.06-1.47-3.4-1.47-2.572 0-4.658 2.086-4.658 4.66 0 .364.042.718.12 1.06-3.873-.195-7.304-2.05-9.602-4.868-.4.69-.63 1.49-.63 2.342 0 1.616.823 3.043 2.072 3.878-.764-.025-1.482-.234-2.11-.583v.06c0 2.257 1.605 4.14 3.737 4.568-.39.106-.803.163-1.227.163-.3 0-.593-.028-.877-.082.593 1.85 2.313 3.198 4.352 3.234-1.595 1.25-3.604 1.995-5.786 1.995-.376 0-.747-.022-1.112-.065 2.062 1.323 4.51 2.093 7.14 2.093 8.57 0 13.255-7.098 13.255-13.254 0-.2-.005-.402-.014-.602.91-.658 1.7-1.477 2.323-2.41z"
+						/>
+					</svg>
+				</a>
+				<a
+					href="https://api.whatsapp.com/send?text={encodeURIComponent(shareText + ' ' + shareUrl)}"
+					target="_blank"
+					rel="noopener noreferrer"
+					class="w-12 h-12 flex items-center justify-center rounded-full bg-[#25D366] hover:bg-[#20b859] transition-colors"
+					aria-label="شارك على واتساب"
+				>
+					<svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+						<path
+							d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.79.46 3.48 1.32 4.94L2 22l5.25-1.38c1.41.79 3.02 1.21 4.71 1.21 5.46 0 9.91-4.45 9.91-9.91S17.5 2 12.04 2zM12.04 20.3c-1.55 0-3.03-.4-4.32-1.15l-.31-.18-3.22.84.86-3.14-.2-.33c-.83-1.35-1.27-2.91-1.27-4.53 0-4.54 3.7-8.24 8.24-8.24 4.54 0 8.24 3.7 8.24 8.24 0 4.54-3.7 8.24-8.24 8.24zm4.52-6.2c-.25-.12-1.47-.72-1.7-.81-.23-.09-.39-.12-.56.12-.17.25-.64.81-.79.97-.15.17-.29.19-.54.06-.25-.12-1.06-.39-2.02-1.25-.75-.66-1.25-1.48-1.4-1.73-.14-.25-.02-.38.11-.5.11-.11.25-.29.37-.43.13-.15.17-.25.25-.42.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.4-.42-.55-.42h-.48c-.15 0-.39.06-.6.31-.2.25-.79.76-.79 1.85s.81 2.15.93 2.3.79 1.24 1.9 1.78c1.11.54 1.89.86 2.54 1.1.86.33 1.37.28 1.88.17.59-.13 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.07-.11-.22-.18-.47-.3z"
+						/>
+					</svg>
+				</a>
+			</div>
+		</div>
+
+		<div class="flex justify-center gap-4 mt-8 flex-wrap">
 			<a
 				href="/quizzes/{attempt.expand?.quiz.slug}"
 				class="bg-orange-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-orange-700 transition-transform hover:scale-105"
@@ -107,7 +148,7 @@
 				{@const question = userAnswer.expand?.question}
 				{#if question}
 					<div class="bg-gray-700/50 p-4 rounded-lg" dir="rtl">
-						<p class="text-lg font-semibold mb-4" dir="rtl" >{question.text}</p>
+						<p class="text-lg font-semibold mb-4" dir="rtl">{question.text}</p>
 						<div class="space-y-2">
 							{#each [1, 2, 3, 4] as optionNum}
 								{@const isUserAnswer = userAnswer.selected_option === optionNum}
@@ -133,11 +174,13 @@
 							{/each}
 						</div>
 						{#if question.explanation}
-    <div class="mt-4 pt-4 border-t border-gray-600">
-        <p class="text-sm text-cyan-300 font-semibold" dir="rtl" >توضيح :</p>
-        <p class="text-sm text-gray-300 leading-relaxed" dir="rtl">{question.explanation}</p>
-    </div>
-{/if}
+							<div class="mt-4 pt-4 border-t border-gray-600">
+								<p class="text-sm text-cyan-300 font-semibold" dir="rtl">توضيح :</p>
+								<p class="text-sm text-gray-300 leading-relaxed" dir="rtl">
+									{question.explanation}
+								</p>
+							</div>
+						{/if}
 					</div>
 				{/if}
 			{/each}

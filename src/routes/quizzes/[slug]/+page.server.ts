@@ -10,20 +10,21 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		const quiz = await pb
 			.collection('quizzes')
 			.getFirstListItem(`slug = "${params.slug}" && published = true`, {
-				fields: 'id,collectionId,title,slug,time_limit'
+				expand: 'questions'
 			});
 
-		const questions = await pb.collection('questions').getFullList({
-			filter: `quiz.id = "${quiz.id}"`,
-			sort: '@random',
-			fields: 'id,text,option_1,option_2,option_3,option_4,order,image'
-		});
+		const questions = quiz.expand?.questions || [];
 
-		questions.forEach((q) => {
+		questions.sort(() => Math.random() - 0.5);
+
+		// ✨ إصلاح: إضافة النوع الصريح للمتغير 'q'
+		questions.forEach((q: any) => {
 			if (q.image) {
 				q.imageUrl = pb.files.getURL(q, q.image);
 			}
 		});
+
+		delete quiz.expand;
 
 		return { quiz, questions };
 	} catch (err) {
@@ -42,32 +43,41 @@ export const actions: Actions = {
 		const timeTaken = parseInt(formData.get('time_taken') as string, 10);
 
 		try {
-			const quiz = await pb.collection('quizzes').getFirstListItem(`slug = "${params.slug}"`);
-			const correctQuestions = await pb.collection('questions').getFullList({
-				filter: `quiz.id = "${quiz.id}"`,
-				fields: 'id,correct_option'
+			const quiz = await pb.collection('quizzes').getFirstListItem(`slug = "${params.slug}"`, {
+				expand: 'questions'
 			});
+			const correctQuestions = quiz.expand?.questions || [];
 
-			const correctAnswersMap = new Map(correctQuestions.map((q) => [q.id, q.correct_option]));
+			// ✨ إصلاح: إضافة النوع الصريح للمتغير 'q'
+			const correctAnswersMap = new Map(correctQuestions.map((q: any) => [q.id, q.correct_option]));
 			let score = 0;
 			const answerRecords = [];
-            
-            // --- بداية التحسين: احتساب النقاط بناءً على السرعة ---
-            const timeLimit = quiz.time_limit || (correctQuestions.length * 15); // استخدم الوقت المحدد أو 15 ثانية لكل سؤال كقيمة افتراضية
+			
+			let streakCounter = 0;
+			const timeLimit = quiz.time_limit || correctQuestions.length * 15;
 
 			for (const userAnswer of userAnswers) {
 				const correctAnswer = correctAnswersMap.get(userAnswer.questionId);
 				if (correctAnswer !== undefined) {
 					const isCorrect = correctAnswer === userAnswer.selectedOption;
 					if (isCorrect) {
-                        // 100 نقطة أساسية لكل إجابة صحيحة
-                        score += 100; 
-                        
-                        // نقاط إضافية بناءً على الوقت المتبقي لكل سؤال (بافتراض توزيع الوقت بالتساوي)
-                        const timePerQuestion = timeLimit / correctQuestions.length;
-                        const timeBonus = Math.max(0, Math.round(timePerQuestion - (timeTaken / correctQuestions.length)));
-                        score += timeBonus;
-                    }
+						streakCounter++;
+						let questionScore = 100;
+
+						const timePerQuestion = timeLimit / correctQuestions.length;
+						const timeBonus = Math.max(
+							0,
+							Math.round(timePerQuestion - timeTaken / correctQuestions.length)
+						);
+						questionScore += timeBonus;
+
+						const streakBonus = streakCounter * 10;
+						questionScore += streakBonus;
+						
+						score += questionScore;
+					} else {
+						streakCounter = 0;
+					}
 					answerRecords.push({
 						question: userAnswer.questionId,
 						selected_option: userAnswer.selectedOption,
@@ -75,18 +85,16 @@ export const actions: Actions = {
 					});
 				}
 			}
-            // --- نهاية التحسين ---
 
 			const attemptRecord = await pb.collection('quiz_attempts').create({
 				user: locals.user.id,
 				quiz: quiz.id,
-				score: score, // حفظ النتيجة الجديدة
+				score: score,
 				total_questions: correctQuestions.length,
 				completed_at: new Date().toISOString(),
 				time_taken: isNaN(timeTaken) ? null : timeTaken
 			});
 
-			// استخدام حلقة متسلسلة بدلاً من متزامنة لتجنب الحمل الزائد على قاعدة البيانات
 			for (const record of answerRecords) {
 				await pb.collection('quiz_user_answers').create({
 					...record,

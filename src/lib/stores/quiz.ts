@@ -4,12 +4,13 @@ import { writable } from 'svelte/store';
 export interface Question {
 	id: string;
 	text: string;
+	// ✨ تحسين: إضافة نوع السؤال لدعم أنواع مختلفة
+	type: 'multiple_choice' | 'true_false';
 	option_1: string;
 	option_2: string;
 	option_3: string;
 	option_4: string;
 	order: number;
-	// ---  الإصلاح: إضافة الخاصية الجديدة هنا ---
 	imageUrl?: string;
 }
 

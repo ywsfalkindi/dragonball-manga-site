@@ -8,17 +8,26 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 	const quizId = params.quizId;
 
 	try {
-		const quiz = await pb.collection('quizzes').getOne(quizId);
+		// جلب الاختبار مع توسيع علاقة الأسئلة لجلب تفاصيلها
+		const quiz = await pb.collection('quizzes').getOne(quizId, {
+			expand: 'questions'
+		});
+
 		if (quiz.cover_image) {
 			quiz.cover_image_url = pb.files.getURL(quiz, quiz.cover_image);
 		}
 
-		const questions = await pb.collection('questions').getFullList({
-			filter: `quiz.id = "${quizId}"`,
-			sort: 'order'
+		// جلب كل الأسئلة المتاحة في بنك الأسئلة
+		const allQuestionsInBank = await pb.collection('questions').getFullList({
+			sort: '-created'
 		});
 
-		return { quiz, questions };
+		return {
+			quiz,
+			// هذه هي البيانات الجديدة التي سنستخدمها
+			quizQuestions: quiz.expand?.questions || [],
+			questionBank: allQuestionsInBank
+		};
 	} catch (err) {
 		throw error(404, 'الاختبار غير موجود.');
 	}
@@ -33,7 +42,10 @@ export const actions: Actions = {
 			title: formData.get('title'),
 			slug: formData.get('slug'),
 			description: formData.get('description'),
-			published: formData.get('published') === 'true'
+			published: formData.get('published') === 'true',
+			category: formData.get('category') || 'عام',
+			difficulty: formData.get('difficulty') || 'متوسط',
+			quiz_mode: formData.get('quiz_mode') || 'normal'
 		};
 
 		const timeLimitRaw = formData.get('time_limit') as string;
@@ -49,75 +61,69 @@ export const actions: Actions = {
 		}
 	},
 
-	updateQuizCoverImage: async ({ locals, request, params }) => {
+	// إجراء لربط الأسئلة من البنك بالاختبار
+	linkQuestions: async ({ locals, request, params }) => {
 		if (!locals.admin) throw redirect(303, '/');
 		const formData = await request.formData();
+		const questionIds = formData.getAll('questionIds') as string[];
 
 		try {
-			await pb.collection('quizzes').update(params.quizId, formData);
-			return { type: 'details', success: true, message: 'تم تحديث صورة الغلاف.' };
-		} catch (err) {
-			return fail(400, {
-				type: 'details',
-				success: false,
-				message: 'فشل تحديث صورة الغلاف.'
+			await pb.collection('quizzes').update(params.quizId, {
+				'questions+': questionIds
 			});
+			return { type: 'question', success: true, message: 'تمت إضافة الأسئلة للاختبار.' };
+		} catch (err) {
+			return fail(400, { type: 'question', success: false, message: 'فشل ربط الأسئلة.' });
 		}
 	},
+    
+    // إجراء لإلغاء ربط سؤال من الاختبار
+    unlinkQuestion: async ({ locals, request, params }) => {
+        if (!locals.admin) throw redirect(303, '/');
+        const formData = await request.formData();
+        const questionId = formData.get('questionId') as string;
 
-	addQuestion: async ({ locals, request, params }) => {
+        try {
+            await pb.collection('quizzes').update(params.quizId, {
+                'questions-': questionId
+            });
+            return { type: 'question', success: true, message: 'تمت إزالة السؤال من الاختبار.' };
+        } catch (err) {
+            return fail(400, { type: 'question', success: false, message: 'فشل إلغاء ربط السؤال.' });
+        }
+    },
+
+	addQuestion: async ({ locals, request }) => {
 		if (!locals.admin) throw redirect(303, '/');
 		const formData = await request.formData();
+		const questionType = formData.get('type') as string;
 
-		const { totalItems } = await pb.collection('questions').getList(1, 1, {
-			filter: `quiz.id = "${params.quizId}"`
-		});
-		
-		// ✨ التحسين: بناء كائن بيانات نظيف بدلاً من تمرير formData مباشرة ✨
-		const dataToCreate = {
-			quiz: params.quizId,
-			order: totalItems + 1,
+		const dataToCreate: { [key: string]: any } = {
 			text: formData.get('text'),
 			image: formData.get('image'),
+			type: questionType || 'multiple_choice',
 			option_1: formData.get('option_1'),
 			option_2: formData.get('option_2'),
-			option_3: formData.get('option_3'),
-			option_4: formData.get('option_4'),
 			correct_option: formData.get('correct_option'),
-			explanation: formData.get('explanation') || '' // استقبال قيمة الشرح
+			explanation: formData.get('explanation') || '',
+			category: formData.get('category') || 'عام',
+			difficulty: formData.get('difficulty') || 'متوسط'
 		};
+
+		if (questionType === 'multiple_choice') {
+			dataToCreate.option_3 = formData.get('option_3');
+			dataToCreate.option_4 = formData.get('option_4');
+		} else {
+			dataToCreate.option_3 = '';
+			dataToCreate.option_4 = '';
+		}
 
 		try {
 			await pb.collection('questions').create(dataToCreate);
-			return { type: 'question', success: true, message: 'تمت إضافة السؤال.' };
+			return { type: 'question', success: true, message: 'تمت إضافة السؤال إلى بنك الأسئلة.' };
 		} catch (err) {
-			console.error(err);
-			return fail(400, { type: 'question', success: false, message: 'فشلت إضافة السؤال.' });
-		}
-	},
-
-	updateQuestion: async ({ locals, request }) => {
-		if (!locals.admin) throw redirect(303, '/');
-		const formData = await request.formData();
-		const questionId = formData.get('questionId') as string;
-
-		// ✨ التحسين: بناء كائن بيانات نظيف لتمريره إلى دالة التحديث ✨
-		const dataToUpdate = {
-			text: formData.get('text'),
-			image: formData.get('image'),
-			option_1: formData.get('option_1'),
-			option_2: formData.get('option_2'),
-			option_3: formData.get('option_3'),
-			option_4: formData.get('option_4'),
-			correct_option: formData.get('correct_option'),
-			explanation: formData.get('explanation') || '' // استقبال قيمة الشرح للتحديث
-		};
-		
-		try {
-			await pb.collection('questions').update(questionId, dataToUpdate);
-			return { type: 'question', success: true, message: 'تم تحديث السؤال.' };
-		} catch (err) {
-			return fail(400, { type: 'question', success: false, message: 'فشل تحديث السؤال.' });
+			console.error("Add question error:", err);
+			return fail(400, { type: 'question', success: false, message: 'فشلت إضافة السؤال للبنك.' });
 		}
 	},
 
@@ -128,30 +134,9 @@ export const actions: Actions = {
 
 		try {
 			await pb.collection('questions').delete(questionId);
-			return { type: 'question', success: true, message: 'تم حذف السؤال.' };
+			return { type: 'question', success: true, message: 'تم حذف السؤال من البنك نهائياً.' };
 		} catch (err) {
 			return fail(400, { type: 'question', success: false, message: 'فشل حذف السؤال.' });
 		}
 	},
-
-	reorderQuestions: async ({ locals, request }) => {
-		if (!locals.admin) throw redirect(303, '/');
-		const formData = await request.formData();
-		const questionIds = (formData.get('order') as string).split(',');
-
-		try {
-			await Promise.all(
-				questionIds.map((id, index) =>
-					pb.collection('questions').update(id, { order: index + 1 })
-				)
-			);
-			return { type: 'question', success: true, message: 'تم تحديث ترتيب الأسئلة.' };
-		} catch (err) {
-			return fail(400, {
-				type: 'question',
-				success: false,
-				message: 'فشل تحديث ترتيب الأسئلة.'
-			});
-		}
-	}
 };
