@@ -139,51 +139,53 @@
 	</div>
 
 	{#if showReview}
-		<div
-			class="w-full max-w-2xl bg-gray-800 rounded-2xl shadow-2xl p-8 text-right space-y-6"
-			transition:slide
-		>
-			<h2 class="text-3xl font-bold text-center text-orange-400 mb-6">مراجعة إجاباتك</h2>
-			{#each data.userAnswers as userAnswer (userAnswer.id)}
-				{@const question = userAnswer.expand?.question}
-				{#if question}
-					<div class="bg-gray-700/50 p-4 rounded-lg" dir="rtl">
-						<p class="text-lg font-semibold mb-4" dir="rtl">{question.text}</p>
-						<div class="space-y-2">
-							{#each [1, 2, 3, 4] as optionNum}
-								{@const isUserAnswer = userAnswer.selected_option === optionNum}
-								{@const isCorrectAnswer = question.correct_option === optionNum}
-								<div
-									class="p-3 rounded border-2 {isUserAnswer && isCorrectAnswer
-										? 'bg-green-500/30 border-green-500'
-										: ''} {isUserAnswer && !isCorrectAnswer
-										? 'bg-red-500/30 border-red-500'
-										: ''} {!isUserAnswer && isCorrectAnswer
-										? 'border-yellow-400 text-yellow-300'
-										: ''} {!isUserAnswer && !isCorrectAnswer ? 'border-transparent' : ''}"
-								>
-									{getOptionText(question, optionNum)}
-									{#if isUserAnswer && isCorrectAnswer}
-										<span class="text-xs mr-2">(إجابتك الصحيحة)</span>
-									{:else if isUserAnswer && !isCorrectAnswer}
-										<span class="text-xs mr-2">(إجابتك الخاطئة)</span>
-									{:else if isCorrectAnswer}
-										<span class="text-xs mr-2">(الإجابة الصحيحة)</span>
-									{/if}
-								</div>
-							{/each}
-						</div>
-						{#if question.explanation}
-							<div class="mt-4 pt-4 border-t border-gray-600">
-								<p class="text-sm text-cyan-300 font-semibold" dir="rtl">توضيح :</p>
-								<p class="text-sm text-gray-300 leading-relaxed" dir="rtl">
-									{question.explanation}
-								</p>
+	<div
+		class="w-full max-w-2xl bg-gray-800 rounded-2xl shadow-2xl p-8 text-right space-y-6"
+		transition:slide
+	>
+		<h2 class="text-3xl font-bold text-center text-orange-400 mb-6">مراجعة إجاباتك</h2>
+		{#each data.userAnswers as userAnswer (userAnswer.id)}
+			{@const question = userAnswer.expand?.question}
+			{#if question}
+				{@const optionsToShow = question.type === 'true_false' ? [1, 2] : [1, 2, 3, 4]}
+				<div class="bg-gray-700/50 p-4 rounded-lg" dir="rtl">
+					<p class="text-lg font-semibold mb-4" dir="rtl">{question.text}</p>
+					
+					<div class="space-y-2">
+						{#each optionsToShow as optionNum}
+							{@const isUserAnswer = userAnswer.selected_option === optionNum}
+							{@const isCorrectAnswer = question.correct_option === optionNum}
+							<div
+								class="p-3 rounded border-2 {isUserAnswer && isCorrectAnswer
+									? 'bg-green-500/30 border-green-500'
+									: ''} {isUserAnswer && !isCorrectAnswer
+									? 'bg-red-500/30 border-red-500'
+									: ''} {!isUserAnswer && isCorrectAnswer
+									? 'border-yellow-400 text-yellow-300'
+									: ''} {!isUserAnswer && !isCorrectAnswer ? 'border-transparent' : ''}"
+							>
+								{getOptionText(question, optionNum)}
+								{#if isUserAnswer && isCorrectAnswer}
+									<span class="text-xs mr-2">(إجابتك الصحيحة)</span>
+								{:else if isUserAnswer && !isCorrectAnswer}
+									<span class="text-xs mr-2">(إجابتك الخاطئة)</span>
+								{:else if isCorrectAnswer}
+									<span class="text-xs mr-2">(الإجابة الصحيحة)</span>
+								{/if}
 							</div>
-						{/if}
+						{/each}
 					</div>
-				{/if}
-			{/each}
-		</div>
-	{/if}
+					{#if question.explanation}
+						<div class="mt-4 pt-4 border-t border-gray-600">
+							<p class="text-sm text-cyan-300 font-semibold" dir="rtl">توضيح :</p>
+							<p class="text-sm text-gray-300 leading-relaxed" dir="rtl">
+								{question.explanation}
+							</p>
+						</div>
+					{/if}
+				</div>
+			{/if}
+		{/each}
+	</div>
+{/if}
 </div>

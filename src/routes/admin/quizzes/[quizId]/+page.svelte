@@ -227,99 +227,103 @@
 			</div>
 			
 			{#if showAddQuestionForm}
-				<div transition:slide class="bg-gray-700/50 p-4 rounded-lg mb-6">
-					<h3 class="text-xl font-bold mb-4 text-right">سؤال جديد للبنك</h3>
-					<form
-						method="POST"
-						action="?/addQuestion"
-						enctype="multipart/form-data"
-						use:enhance={() => {
-							showAddQuestionForm = false;
-							return async ({ update }) => {
-								await update({ reset: false });
-							};
-						}}
-						class="space-y-4 text-right"
-					>
-						<div>
-							<label for="new_type" class="block mb-2">نوع السؤال</label>
-							<select
-								id="new_type"
-								name="type"
-								bind:value={newQuestionType}
-								class="w-full bg-gray-600 p-2 rounded"
-							>
-								<option value="multiple_choice">اختيار من متعدد</option>
-								<option value="true_false">صح أو خطأ</option>
-							</select>
-						</div>
+	<div transition:slide class="bg-gray-700/50 p-4 rounded-lg mb-6">
+		<h3 class="text-xl font-bold mb-4 text-right">سؤال جديد للبنك</h3>
+		<form
+			method="POST"
+			action="?/addQuestion"
+			enctype="multipart/form-data"
+			use:enhance={() => {
+				showAddQuestionForm = false;
+				return async ({ update }) => {
+					await update({ reset: false });
+				};
+			}}
+			class="space-y-4 text-right"
+		>
+			<div>
+				<label for="new_type" class="block mb-2">نوع السؤال</label>
+				<select id="new_type" name="type" bind:value={newQuestionType} class="w-full bg-gray-600 p-2 rounded">
+					<option value="multiple_choice">اختيار من متعدد</option>
+					<option value="true_false">صح أو خطأ</option>
+				</select>
+			</div>
 
-						<div>
-							<label for="new_text" class="block mb-2">نص السؤال</label>
-							<input
-								id="new_text"
-								type="text"
-								name="text"
-								required
-								class="w-full bg-gray-600 p-2 rounded"
-								dir="rtl"
-							/>
-						</div>
-						
-						{#if newQuestionType === 'multiple_choice'}
-							<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-								<div>
-									<label for="new_option_1" class="block mb-1">الخيار 1</label>
-									<input id="new_option_1" type="text" name="option_1" required class="w-full bg-gray-600 p-2 rounded" />
-								</div>
-								<div>
-									<label for="new_option_2" class="block mb-1">الخيار 2</label>
-									<input id="new_option_2" type="text" name="option_2" required class="w-full bg-gray-600 p-2 rounded" />
-								</div>
-								<div>
-									<label for="new_option_3" class="block mb-1">الخيار 3</label>
-									<input id="new_option_3" type="text" name="option_3" required class="w-full bg-gray-600 p-2 rounded" />
-								</div>
-								<div>
-									<label for="new_option_4" class="block mb-1">الخيار 4</label>
-									<input id="new_option_4" type="text" name="option_4" required class="w-full bg-gray-600 p-2 rounded" />
-								</div>
-							</div>
-							<div>
-								<label for="new_correct_option_mc" class="block mb-2">الإجابة الصحيحة</label>
-								<select
-									id="new_correct_option_mc"
-									name="correct_option"
-									required
-									class="w-full bg-gray-600 p-2 rounded"
-								>
-									<option value="1">الخيار 1</option>
-									<option value="2">الخيار 2</option>
-									<option value="3">الخيار 3</option>
-									<option value="4">الخيار 4</option>
-								</select>
-							</div>
-						{:else if newQuestionType === 'true_false'}
-							<div>
-								<input type="hidden" name="option_1" value="صح" />
-								<input type="hidden" name="option_2" value="خطأ" />
-								<label for="new_correct_option_tf" class="block mb-2">الإجابة الصحيحة</label>
-								<select
-									id="new_correct_option_tf"
-									name="correct_option"
-									required
-									class="w-full bg-gray-600 p-2 rounded"
-								>
-									<option value="1">صح</option>
-									<option value="2">خطأ</option>
-								</select>
-							</div>
-						{/if}
+			<div>
+				<label for="new_text" class="block mb-2">نص السؤال</label>
+				<input id="new_text" type="text" name="text" required class="w-full bg-gray-600 p-2 rounded" dir="rtl" />
+			</div>
 
-						<button type="submit" class="bg-blue-600 font-bold py-2 px-6 rounded">حفظ السؤال في البنك</button>
-					</form>
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+				<div>
+					<label for="new_category" class="block mb-2">التصنيف</label>
+					<select id="new_category" name="category" class="w-full bg-gray-600 p-2 rounded">
+						<option value="عام">عام</option>
+						<option value="شخصيات">شخصيات</option>
+						<option value="أحداث">أحداث</option>
+						<option value="تقنيات">تقنيات</option>
+					</select>
+				</div>
+				<div>
+					<label for="new_difficulty" class="block mb-2">مستوى الصعوبة</label>
+					<select id="new_difficulty" name="difficulty" class="w-full bg-gray-600 p-2 rounded">
+						<option value="سهل">سهل</option>
+						<option value="متوسط">متوسط</option>
+						<option value="صعب">صعب</option>
+						<option value="خبير">خبير</option>
+					</select>
+				</div>
+			</div>
+
+			{#if newQuestionType === 'multiple_choice'}
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<div>
+						<label for="new_option_1" class="block mb-1">الخيار 1</label>
+						<input id="new_option_1" type="text" name="option_1" required class="w-full bg-gray-600 p-2 rounded" />
+					</div>
+					<div>
+						<label for="new_option_2" class="block mb-1">الخيار 2</label>
+						<input id="new_option_2" type="text" name="option_2" required class="w-full bg-gray-600 p-2 rounded" />
+					</div>
+					<div>
+						<label for="new_option_3" class="block mb-1">الخيار 3</label>
+						<input id="new_option_3" type="text" name="option_3" required class="w-full bg-gray-600 p-2 rounded" />
+					</div>
+					<div>
+						<label for="new_option_4" class="block mb-1">الخيار 4</label>
+						<input id="new_option_4" type="text" name="option_4" required class="w-full bg-gray-600 p-2 rounded" />
+					</div>
+				</div>
+				<div>
+					<label for="new_correct_option_mc" class="block mb-2">الإجابة الصحيحة</label>
+					<select id="new_correct_option_mc" name="correct_option" required class="w-full bg-gray-600 p-2 rounded">
+						<option value="1">الخيار 1</option>
+						<option value="2">الخيار 2</option>
+						<option value="3">الخيار 3</option>
+						<option value="4">الخيار 4</option>
+					</select>
+				</div>
+			{:else if newQuestionType === 'true_false'}
+				<div>
+					<input type="hidden" name="option_1" value="صح" />
+					<input type="hidden" name="option_2" value="خطأ" />
+					<label for="new_correct_option_tf" class="block mb-2">الإجابة الصحيحة</label>
+					<select id="new_correct_option_tf" name="correct_option" required class="w-full bg-gray-600 p-2 rounded">
+						<option value="1">صح</option>
+						<option value="2">خطأ</option>
+					</select>
 				</div>
 			{/if}
+            
+            <div>
+                <label for="new_explanation" class="block mb-2">شرح الإجابة (اختياري)</label>
+                <textarea id="new_explanation" name="explanation" rows="2" class="w-full bg-gray-600 p-2 rounded"></textarea>
+            </div>
+
+			<button type="submit" class="bg-blue-600 font-bold py-2 px-6 rounded">حفظ السؤال في البنك</button>
+		</form>
+	</div>
+{/if}
 
 			<form method="POST" action="?/linkQuestions" use:enhance={handleUpdate}>
 				<div class="flex justify-between items-center mb-4">

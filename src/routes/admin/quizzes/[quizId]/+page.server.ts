@@ -100,22 +100,26 @@ export const actions: Actions = {
 
 		const dataToCreate: { [key: string]: any } = {
 			text: formData.get('text'),
-			image: formData.get('image'),
 			type: questionType || 'multiple_choice',
 			option_1: formData.get('option_1'),
 			option_2: formData.get('option_2'),
-			correct_option: formData.get('correct_option'),
+			correct_option: Number(formData.get('correct_option')),
 			explanation: formData.get('explanation') || '',
 			category: formData.get('category') || 'عام',
-			difficulty: formData.get('difficulty') || 'متوسط'
+			difficulty: formData.get('difficulty') || 'متوسط',
+            order: 1 
 		};
 
 		if (questionType === 'multiple_choice') {
 			dataToCreate.option_3 = formData.get('option_3');
 			dataToCreate.option_4 = formData.get('option_4');
 		} else {
-			dataToCreate.option_3 = '';
-			dataToCreate.option_4 = '';
+			// ✨  اﻟﺤﻞ اﻟﻨﻬﺎﺋﻲ (The Final Fix) ✨
+			// For true/false questions, set options 3 and 4 to a non-empty placeholder
+			dataToCreate.option_1 = 'صح';
+			dataToCreate.option_2 = 'خطأ';
+			dataToCreate.option_3 = '-'; // Prevent "Cannot be blank" error
+			dataToCreate.option_4 = '-'; // Prevent "Cannot be blank" error
 		}
 
 		try {
@@ -123,7 +127,9 @@ export const actions: Actions = {
 			return { type: 'question', success: true, message: 'تمت إضافة السؤال إلى بنك الأسئلة.' };
 		} catch (err) {
 			console.error("Add question error:", err);
-			return fail(400, { type: 'question', success: false, message: 'فشلت إضافة السؤال للبنك.' });
+            // @ts-ignore
+			console.error("PocketBase response:", JSON.stringify(err.response, null, 2));
+			return fail(400, { type: 'question', success: false, message: 'فشلت إضافة السؤال للبنك. تأكد من أن جميع الحقول ممتلئة.' });
 		}
 	},
 
