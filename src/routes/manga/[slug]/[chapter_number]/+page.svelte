@@ -10,29 +10,24 @@
 	export let data: PageData;
     export let form: ActionData;
 
-	// --- ✨ بداية التصحيح النهائي ---
-	// استخدمنا العبارات التفاعلية ($:) لضمان تحديث المتغيرات دائماً
 	$: ({ user, manga, chapter, pages, comments, nextChapterExists, lastPageRead } = data);
-    $: currentChapter = chapter ? Number(chapter.chapter_number) : 0;
+	$: currentChapter = chapter ? Number(chapter.chapter_number) : 0;
 	
-	// هذا المتغير سيُعاد حسابه تلقائياً كلما تغيرت `data`
     $: currentPageIndex = Math.max(0, Math.min((lastPageRead || 1) - 1, pages.length - 1));
-	// --- ✨ نهاية التصحيح النهائي ---
 
 	$: progress = pages.length > 0 ? ((currentPageIndex + 1) / pages.length) * 100 : 0;
 	let imagesToPreload: string[] = [];
 	const PRELOAD_AHEAD_COUNT = 7;
-
 	let showSettings = false;
 	let showThumbnails = false;
 	let uiVisible = true;
 	let inactivityTimer: number | NodeJS.Timeout;
-    
 	let updateTimeout: number | NodeJS.Timeout;
+
     async function updateProgress(pageIndex: number) {
         if (!user) return;
-        
-        clearTimeout(updateTimeout);
+		clearTimeout(updateTimeout);
+        // تم تقليل مدة التأخير إلى 500ms
         updateTimeout = setTimeout(async () => {
             try {
                 await fetch('/api/update-progress', {
@@ -46,17 +41,30 @@
             } catch (err) {
                 console.error("Failed to update progress:", err);
             }
-        }, 1500);
+        }, 500);
     }
 
-    // ✨ تم تبسيط هذا الجزء ليعتمد على `currentPageIndex` التفاعلي
     $: if (browser && pages.length > 0) {
         updateProgress(currentPageIndex);
     }
     
+    // ✨ الإصلاح الثاني: التمرير التلقائي عند تغيير الفصل ✨
+    $: {
+        if (browser && chapter?.id) {
+            if ($readingMode === 'vertical') {
+                setTimeout(() => {
+                    const pageElement = document.getElementById(`page-${currentPageIndex}`);
+                    if (pageElement) {
+                        pageElement.scrollIntoView({ behavior: 'auto', block: 'start' });
+                    }
+                }, 100);
+            }
+        }
+    }
+
     function onImageError(event: Event) {
         const img = event.target as HTMLImageElement;
-        img.src = '/image_error.png';
+		img.src = '/image_error.png';
         img.style.width = '300px';
         img.style.opacity = '0.5';
     }
@@ -80,43 +88,43 @@
 				resetTimer();
 			}
 			lastScrollY = window.scrollY;
-
-            if ($readingMode === 'vertical') {
+			if ($readingMode === 'vertical') {
                 let closestPageIndex = 0;
-                let minDistance = Infinity;
+				let minDistance = Infinity;
                 imageElements.forEach((el, index) => {
                     if(el) {
                         const rect = el.getBoundingClientRect();
                         const distance = Math.abs(rect.top - 80);
-                        if (distance < minDistance) {
+                
+						if (distance < minDistance) {
                             minDistance = distance;
                             closestPageIndex = index;
                         }
                     }
                 });
-                if (currentPageIndex !== closestPageIndex) {
+				if (currentPageIndex !== closestPageIndex) {
                     currentPageIndex = closestPageIndex;
-                }
+				}
             }
 		}
 	}
 
     function handleProgressClick(event: MouseEvent) {
         const target = event.currentTarget as HTMLDivElement;
-        const rect = target.getBoundingClientRect();
+		const rect = target.getBoundingClientRect();
         const x = event.clientX - rect.left;
         const percentage = x / rect.width;
         const pageCount = pages.length;
-        if (pageCount === 0) return;
+		if (pageCount === 0) return;
         const targetIndex = Math.floor(percentage * pageCount);
-        if ($readingMode === 'horizontal') {
+		if ($readingMode === 'horizontal') {
             const step = $pageDisplayMode === 'double' ? 2 : 1;
             currentPageIndex = Math.max(0, Math.min(pageCount - step, targetIndex));
-        } else {
+		} else {
             const pageElement = document.getElementById(`page-${targetIndex}`);
-            if (pageElement) {
+			if (pageElement) {
                 pageElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                resetTimer();
+				resetTimer();
             }
         }
     }
@@ -130,13 +138,6 @@
 		};
 		document.addEventListener('fullscreenchange', updateFullscreenStatus);
         
-        if ($readingMode === 'vertical' && currentPageIndex > 0) {
-            const pageElement = document.getElementById(`page-${currentPageIndex}`);
-            if (pageElement) {
-                setTimeout(() => pageElement.scrollIntoView({ behavior: 'auto', block: 'start' }), 100);
-            }
-        }
-
 		if ($readingMode === 'vertical' && imageElements.length > 1) {
 			const options = {
 				root: null, 
@@ -156,7 +157,6 @@
 					}
 				});
 			}, options);
-
 			imageElements.forEach((img) => {
 				if(img) observer.observe(img);
 			});
@@ -175,6 +175,7 @@
         clearTimeout(updateTimeout);
 		if (observer) observer.disconnect();
 	});
+
 	$: {
 		if ($readingMode === 'horizontal' && pages.length > 0) {
 			const start = currentPageIndex + ($pageDisplayMode === 'double' ? 2 : 1);
