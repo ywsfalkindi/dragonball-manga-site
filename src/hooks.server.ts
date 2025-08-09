@@ -11,6 +11,40 @@ async function createFindToken(userId: string, ballNumber: number): Promise<stri
     return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+async function grantXp(userId: string, amount: number) {
+	if (!userId || amount <= 0) return;
+
+	try {
+		const user = await pb.collection('users').getOne(userId);
+
+		const newXp = (user.xp || 0) + amount;
+		let newLevel = user.power_level || 1;
+		let xpToNext = user.xp_to_next_level || 100;
+
+		// التحقق من رفع المستوى
+		if (newXp >= xpToNext) {
+			newLevel++;
+			const remainingXp = newXp - xpToNext;
+			xpToNext = newLevel * 100; // المعادلة
+			
+			// يمكنك هنا إضافة منطق إرسال إشعار للمستخدم بأنه رفع مستواه
+			
+			await pb.collection('users').update(userId, {
+				xp: remainingXp, // إعادة تعيين نقاط الخبرة مع الاحتفاظ بالباقي
+				power_level: newLevel,
+				xp_to_next_level: xpToNext
+			});
+
+		} else {
+			await pb.collection('users').update(userId, {
+				'xp+': amount
+			});
+		}
+	} catch (err) {
+		console.error("Failed to grant XP:", err);
+	}
+}
+
 export const handle: Handle = async ({ event, resolve }) => {
 	pb.authStore.loadFromCookie(event.request.headers.get('cookie') || '');
 
@@ -31,6 +65,15 @@ export const handle: Handle = async ({ event, resolve }) => {
 			event.locals.user = user.record;
 			if (user.record?.isAdmin) {
 				event.locals.admin = true;
+			}
+
+            const lastLogin = new Date(user.record?.last_login_xp || 0);
+			const now = new Date();
+			const oneDay = 24 * 60 * 60 * 1000;
+			
+			if (now.getTime() - lastLogin.getTime() > oneDay) {
+				await grantXp(user.record.id, 15); // 15 XP
+				await pb.collection('users').update(user.record.id, { last_login_xp: now.toISOString() });
 			}
 
             // --- بداية منطق كرة التنين ---
@@ -74,3 +117,5 @@ export const handle: Handle = async ({ event, resolve }) => {
 	response.headers.set('set-cookie', pb.authStore.exportToCookie({ httpOnly: true, secure: true, sameSite: 'lax' }));
 	return response;
 };
+
+export { grantXp };

@@ -22,6 +22,7 @@ export const actions: Actions = {
 		try {
 			await pb.collection('users').create({
 				username,
+				name: username,
 				email,
 				password,
 				passwordConfirm,

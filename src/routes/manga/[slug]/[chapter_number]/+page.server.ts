@@ -2,6 +2,7 @@
 import { pb } from '$lib/pocketbase';
 import { error, fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
+import { grantXp } from '../../../../hooks.server';
 import DOMPurify from 'dompurify';
 import { JSDOM } from 'jsdom';
 
@@ -15,8 +16,15 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 
 		if (locals.user) {
 			try {
-				await pb.collection('read_history').create({ user: locals.user.id, chapter: chapter.id, manga: manga.id });
-			} catch (err) { /* ignore */ }
+				// التحقق مما إذا كان المستخدم قد قرأ هذا الفصل من قبل لمنع تكرار XP
+				await pb.collection('read_history').getFirstListItem(`user.id = "${locals.user.id}" && chapter.id = "${chapter.id}"`);
+			} catch (err: any) {
+				// إذا لم يقرأه من قبل (err.status === 404)
+				if (err.status === 404) {
+					await pb.collection('read_history').create({ user: locals.user.id, chapter: chapter.id, manga: manga.id });
+					await grantXp(locals.user.id, 25); // ✨ منح 25 XP
+				}
+			}
 		}
 
 		// --- بداية التحسين لنظام التعليقات ---
@@ -100,6 +108,7 @@ export const actions: Actions = {
             chapter: chapter.id,
             parentComment: parentId || null // <-- ✨ إضافة: حفظ parentId
         });
+        await grantXp(locals.user.id, 10);
     } catch (err) {
         return fail(500, { error: 'حدث خطأ ما أثناء إرسال التعليق.' });
     }
@@ -120,6 +129,18 @@ export const actions: Actions = {
             await pb.collection('comments').update(commentId, {
                 'likes+': locals.user.id
             });
+
+        try {
+                const comment = await pb.collection('comments').getOne(commentId, { fields: 'user' });
+                // نتأكد أن المستخدم لا يعجب بتعليقه الخاص
+                if (comment.user !== locals.user.id) {
+                    await grantXp(comment.user, 5); // منح 5 XP لصاحب التعليق
+                }
+            } catch (xpError) {
+                // تجاهل الخطأ في حال فشل منح XP حتى لا يؤثر على الإعجاب
+                console.error("Failed to grant XP for like:", xpError);
+            }
+
         } catch (err) {
             // إذا كان المستخدم قد أعجب به بالفعل، سيحدث خطأ، لذا سنقوم بإزالة الإعجاب
             try {

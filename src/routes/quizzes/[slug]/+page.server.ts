@@ -2,6 +2,7 @@
 import { pb } from '$lib/pocketbase';
 import { error, fail, redirect } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
+import { grantXp } from '../../../hooks.server';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
 	if (!locals.user) throw redirect(303, '/login?redirect=/quizzes/' + params.slug);
@@ -102,6 +103,10 @@ export const actions: Actions = {
 					user: locals.user.id
 				});
 			}
+
+			let totalXpGained = 50;
+			totalXpGained += Math.floor(score / 20);
+			await grantXp(locals.user.id, totalXpGained);
 
 			return { success: true, attemptId: attemptRecord.id };
 		} catch (err) {

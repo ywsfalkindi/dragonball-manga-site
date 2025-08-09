@@ -45,12 +45,14 @@
         <div class="flex items-center gap-x-4 md:gap-x-6 text-sm md:text-base">
             
             <a href="/quizzes" class="font-semibold hover:text-orange-400 transition-colors">الاختبارات</a>
-
+            <a href="/leaderboard" class="font-semibold hover:text-orange-400 transition-colors">لوحة الصدارة</a>
             <div class="w-px h-6 bg-gray-600 hidden sm:block"></div>
+
+        
 
             {#if data.user}
                 <div class="flex items-center gap-x-4">
-                    <span class="hidden sm:inline">أهلاً بك، {data.user.username}</span>
+                    <span class="hidden sm:inline">أهلاً بك، {data.user.name}</span>
                     <a href="/profile" class="py-2 px-4 bg-orange-600 rounded hover:bg-orange-700 whitespace-nowrap">ملفي الشخصي</a>
                 </div>
             {:else}

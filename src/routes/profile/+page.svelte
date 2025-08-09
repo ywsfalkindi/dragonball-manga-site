@@ -121,12 +121,12 @@
 	</div>
 {/if}
 
-<div class="min-h-screen bg-gray-900 text-white font-[Tajawal] p-8">
+<div class="min-h-screen bg-gray-900 text-white font-[Tajawal] p-8" dir="rtl" >
 	<div class="container mx-auto">
 		<div class="flex flex-wrap justify-between items-center mb-10 gap-4">
 			<div>
 				<h1 class="text-4xl font-bold">ملفي الشخصي</h1>
-				<p class="text-gray-400 mt-1">مرحبًا بعودتك، {data.user?.username}!</p>
+				<p class="text-gray-400 mt-1">مرحباً بعودتك ، {data.user?.username}</p>
 				{#if data.user.title}
 					<span
 						class="mt-2 inline-block bg-yellow-500 text-black text-sm font-bold py-1 px-3 rounded-full"
@@ -141,9 +141,22 @@
 			</form>
 		</div>
 
+        <div class="bg-gray-800 p-6 rounded-lg shadow-lg mb-12" dir="rtl">
+			<div class="flex justify-between items-center mb-2">
+				<span class="font-bold text-orange-400">مستوى الطاقة : {data.user.power_level}</span>
+				<span class="text-sm text-gray-400">{data.user.xp} / {data.user.xp_to_next_level} XP</span>
+			</div>
+			<div class="w-full bg-gray-700 rounded-full h-4">
+				<div
+					class="bg-green-500 h-4 rounded-full transition-all duration-500"
+					style="width: {(data.user.xp / data.user.xp_to_next_level) * 100}%"
+				></div>
+			</div>
+		</div>
+
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
 			<div class="bg-gray-800 p-6 rounded-lg shadow-lg">
-				<h2 class="text-2xl font-bold mb-4">إحصائياتي</h2>
+				<h2 class="text-2xl font-bold mb-4" dir="rtl" >إحصائياتي</h2>
 				<div class="flex justify-around items-center">
 					<div class="text-center">
 						<h3 class="text-xl text-gray-400">المانجا المفضلة</h3>
@@ -160,7 +173,7 @@
 				</div>
 			</div>
 
-			<div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+			<div class="bg-gray-800 p-6 rounded-lg shadow-lg" dir="rtl">
 				<h2 class="text-2xl font-bold mb-4">تغيير كلمة المرور</h2>
 				<form method="POST" action="?/changePassword" class="space-y-4">
 					<div>
@@ -207,7 +220,7 @@
 			</div>
 		</div>
 
-		<h2 class="text-3xl font-bold mb-6">كرات التنين</h2>
+		<h2 class="text-3xl font-bold mb-6" dir="rtl" >كرات التنين</h2>
 		<div class="bg-gray-800 p-6 rounded-lg shadow-lg">
 			<div class="flex justify-center items-center gap-4 mb-6">
 				{#each { length: 7 } as _, i}
@@ -242,7 +255,7 @@
 			{/if}
 		</div>
 
-		<h2 class="text-3xl font-bold mb-6 mt-12">قائمتي المفضلة</h2>
+		<h2 class="text-3xl font-bold mb-6 mt-12" dir="rtl" >قائمتي المفضلة</h2>
 		{#if data.favorites.length > 0}
 			<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
 				{#each data.favorites as fav (fav.id)}
@@ -252,8 +265,8 @@
 				{/each}
 			</div>
 		{:else}
-			<div class="text-center py-10 bg-gray-800 rounded-lg">
-				<p class="text-lg text-gray-400">قائمتك فارغة حاليًا.</p>
+			<div class="text-center py-10 bg-gray-800 rounded-lg" dir="rtl" >
+				<p class="text-lg text-gray-400">قائمتك فارغة حالياً</p>
 				<a
 					href="/"
 					class="mt-4 inline-block bg-orange-600 text-white font-bold py-2 px-6 rounded-lg transition-colors hover:bg-orange-500"
