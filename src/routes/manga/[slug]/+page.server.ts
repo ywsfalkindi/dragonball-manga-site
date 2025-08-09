@@ -1,6 +1,6 @@
 import { pb } from '$lib/pocketbase';
 import type { Actions, PageServerLoad } from './$types';
-import { error, redirect } from '@sveltejs/kit'; // Import the error helper
+import { error, redirect } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async ({ locals, params, url }) => {
 	try {
@@ -29,16 +29,20 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 
 			const historyRecords = await pb.collection('read_history').getFullList({
 				filter: `user = "${locals.user.id}" && manga = "${manga.id}"`,
-				sort: 'created',
+				sort: '-updated',
 				expand: 'chapter'
 			});
 
 			readChapterIds = new Set(historyRecords.map((r) => r.chapter));
 
 			if (historyRecords.length > 0) {
-				const lastRecord = historyRecords[historyRecords.length - 1];
+				const lastRecord = historyRecords[0];
 				if (lastRecord.expand && lastRecord.expand.chapter) {
-					lastReadChapter = lastRecord.expand.chapter;
+					// ✨  التصحيح: إضافة رقم آخر صفحة تمت قراءتها
+					lastReadChapter = {
+						...lastRecord.expand.chapter,
+						last_page_read: lastRecord.last_page_read // إضافة هذا الحقل
+					};
 				}
 			}
 		}
@@ -52,12 +56,9 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 			lastReadChapter
 		};
 	} catch (err: any) {
-		// If the error status is 404, it means the manga was not found.
-		// We then throw a SvelteKit 404 error to show a proper "Not Found" page.
 		if (err.status === 404) {
 			throw error(404, 'المانجا المطلوبة غير موجودة');
 		}
-		// For any other errors, log them and show a generic server error page.
 		console.error('Failed to load manga page:', err);
 		throw error(500, 'حدث خطأ في الخادم أثناء تحميل صفحة المانجا.');
 	}

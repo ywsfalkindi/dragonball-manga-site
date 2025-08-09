@@ -2,24 +2,15 @@
 	import type { PageData } from './$types';
 	import { enhance } from '$app/forms';
 	import { fly } from 'svelte/transition';
-
 	export let data: PageData;
 
-	// ✨ FIX: Use reactive statements ($:) to safely handle data as it loads.
-	// This ensures the variables are always up-to-date when `data` changes.
-	$: ({ manga, isFavorited, chaptersResult, readChapterIds, lastReadChapter, user } = data);
-	
-	// ✨ FIX: Use optional chaining (?.) and a fallback value ([])
-	// This prevents the error if `chaptersResult` is not yet available,
-	// and ensures `chapters` is always an array.
-	$: chapters = chaptersResult?.items || [];
+	const { manga, isFavorited, chaptersResult, readChapterIds, lastReadChapter, user } = data;
+	const chapters = chaptersResult.items || [];
 
-	// Variables to control the toast notification
 	let showToast = false;
 	let toastMessage = '';
 </script>
 
-<!-- This is the toast notification component. It will appear when showToast is true. -->
 {#if showToast}
 	<div
 		in:fly={{ y: -20, duration: 300 }}
@@ -47,15 +38,14 @@
 
 			{#if user}
 				<div class="mt-6 flex items-center space-x-4 flex-wrap gap-y-4">
-					<!-- This form handles adding/removing from favorites. -->
 					<form
 						method="POST"
 						action="?/{isFavorited ? 'unfavorite' : 'favorite'}"
 						use:enhance={() => {
 							// This code runs just before the form is submitted.
 							// We set the message that will be displayed in the toast.
-							toastMessage = isFavorited ? 'تمت الإزالة من المفضلة بنجاح' : 'تمت الإضافة إلى المفضلة بنجاح';
-
+							toastMessage = isFavorited ?
+'تمت الإزالة من المفضلة بنجاح' : 'تمت الإضافة إلى المفضلة بنجاح';
 							return async ({ update }) => {
 								// This code runs after the server action is complete.
 								// SvelteKit automatically updates the `data` prop, so `isFavorited` changes.
@@ -73,12 +63,13 @@
 							class="bg-orange-600 text-white font-bold py-2 px-6 rounded-lg transition-colors hover:bg-orange-500 flex items-center gap-2"
 						>
 							<span>{isFavorited ? '❤️' : '🤍'}</span>
-							<span>{isFavorited ? 'إزالة من المفضلة' : 'إضافة إلى المفضلة'}</span>
+							<span>{isFavorited ?
+'إزالة من المفضلة' : 'إضافة إلى المفضلة'}</span>
 						</button>
 					</form>
 					{#if lastReadChapter}
 						<a
-							href="/manga/{manga.slug}/{lastReadChapter.chapter_number}"
+							href="/manga/{manga.slug}/{lastReadChapter.chapter_number}?page={lastReadChapter.last_page_read}"
 							class="inline-block bg-green-600 text-white font-bold py-2 px-6 rounded-lg transition-colors hover:bg-green-500"
 						>
 							🚀 أكمل القراءة (الفصل #{lastReadChapter.chapter_number})
@@ -94,7 +85,8 @@
 		<div class="bg-gray-800 rounded-lg shadow-lg">
 			<ul class="divide-y divide-gray-700">
 				{#each chapters as chapter (chapter.id)}
-					<li class={lastReadChapter?.id === chapter.id ? 'bg-blue-900/30' : ''}>
+					<li class={lastReadChapter?.id === chapter.id ?
+'bg-blue-900/30' : ''}>
 						<a
 							href="/manga/{manga.slug}/{chapter.chapter_number}"
 							class="p-4 hover:bg-gray-700/50 transition-colors duration-200 flex items-center justify-between"
@@ -121,12 +113,12 @@
 					<li class="p-6 text-center text-gray-400">لم تتم إضافة أي فصول لهذه المانجا بعد.</li>
 				{/each}
 			</ul>
-			<!-- Pagination for chapters -->
 			<div class="flex justify-center items-center space-x-4 mt-8 pb-6 text-white" dir="ltr">
 				<a
 					href="?page={chaptersResult.page - 1}"
 					class="py-2 px-4 bg-gray-700 rounded {chaptersResult.page === 1
-						? 'opacity-50 pointer-events-none'
+						?
+'opacity-50 pointer-events-none'
 						: 'hover:bg-orange-600'}"
 				>
 					&laquo; السابق

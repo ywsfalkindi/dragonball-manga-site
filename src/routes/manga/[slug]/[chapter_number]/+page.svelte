@@ -8,11 +8,17 @@
     import { PUBLIC_CDN_URL } from '$env/static/public';
 	import Comment from '$lib/components/Comment.svelte';
 	export let data: PageData;
-// svelte-ignore export_let_unused
     export let form: ActionData;
-	$: ({ user, manga, chapter, pages, comments, nextChapterExists } = data);
+
+	// --- ✨ بداية التصحيح النهائي ---
+	// استخدمنا العبارات التفاعلية ($:) لضمان تحديث المتغيرات دائماً
+	$: ({ user, manga, chapter, pages, comments, nextChapterExists, lastPageRead } = data);
     $: currentChapter = chapter ? Number(chapter.chapter_number) : 0;
-	let currentPageIndex = 0;
+	
+	// هذا المتغير سيُعاد حسابه تلقائياً كلما تغيرت `data`
+    $: currentPageIndex = Math.max(0, Math.min((lastPageRead || 1) - 1, pages.length - 1));
+	// --- ✨ نهاية التصحيح النهائي ---
+
 	$: progress = pages.length > 0 ? ((currentPageIndex + 1) / pages.length) * 100 : 0;
 	let imagesToPreload: string[] = [];
 	const PRELOAD_AHEAD_COUNT = 7;
@@ -22,10 +28,35 @@
 	let uiVisible = true;
 	let inactivityTimer: number | NodeJS.Timeout;
     
-    // ✨ التحسين: إضافة دالة لمعالجة خطأ تحميل الصورة ✨
+	let updateTimeout: number | NodeJS.Timeout;
+    async function updateProgress(pageIndex: number) {
+        if (!user) return;
+        
+        clearTimeout(updateTimeout);
+        updateTimeout = setTimeout(async () => {
+            try {
+                await fetch('/api/update-progress', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chapterId: chapter.id,
+                        page: pageIndex + 1
+                    })
+                });
+            } catch (err) {
+                console.error("Failed to update progress:", err);
+            }
+        }, 1500);
+    }
+
+    // ✨ تم تبسيط هذا الجزء ليعتمد على `currentPageIndex` التفاعلي
+    $: if (browser && pages.length > 0) {
+        updateProgress(currentPageIndex);
+    }
+    
     function onImageError(event: Event) {
         const img = event.target as HTMLImageElement;
-        img.src = '/image_error.png'; // يجب إضافة صورة بديلة في مجلد static
+        img.src = '/image_error.png';
         img.style.width = '300px';
         img.style.opacity = '0.5';
     }
@@ -49,6 +80,24 @@
 				resetTimer();
 			}
 			lastScrollY = window.scrollY;
+
+            if ($readingMode === 'vertical') {
+                let closestPageIndex = 0;
+                let minDistance = Infinity;
+                imageElements.forEach((el, index) => {
+                    if(el) {
+                        const rect = el.getBoundingClientRect();
+                        const distance = Math.abs(rect.top - 80);
+                        if (distance < minDistance) {
+                            minDistance = distance;
+                            closestPageIndex = index;
+                        }
+                    }
+                });
+                if (currentPageIndex !== closestPageIndex) {
+                    currentPageIndex = closestPageIndex;
+                }
+            }
 		}
 	}
 
@@ -80,11 +129,17 @@
 			isFullscreen = document.fullscreenElement !== null;
 		};
 		document.addEventListener('fullscreenchange', updateFullscreenStatus);
+        
+        if ($readingMode === 'vertical' && currentPageIndex > 0) {
+            const pageElement = document.getElementById(`page-${currentPageIndex}`);
+            if (pageElement) {
+                setTimeout(() => pageElement.scrollIntoView({ behavior: 'auto', block: 'start' }), 100);
+            }
+        }
 
 		if ($readingMode === 'vertical' && imageElements.length > 1) {
 			const options = {
 				root: null, 
-                // ✨ التحسين: تقليل الهامش لتحميل الصور القريبة فقط ✨
 				rootMargin: '500px 0px', 
 				threshold: 0.01
 			};
@@ -111,11 +166,13 @@
 			document.removeEventListener('fullscreenchange', updateFullscreenStatus);
 			clearTimeout(inactivityTimer);
 			if (observer) observer.disconnect();
+            clearTimeout(updateTimeout);
 		};
 	});
 
 	onDestroy(() => {
 		clearTimeout(inactivityTimer);
+        clearTimeout(updateTimeout);
 		if (observer) observer.disconnect();
 	});
 	$: {
@@ -182,7 +239,6 @@
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
 	class="reader-container min-h-screen font-[Tajawal]"
 	style="background-color: {$readerBackgroundColor};"
@@ -236,7 +292,8 @@
 						<button
 							on:click={() => pageDisplayMode.set('double')}
 							class="rounded-md px-3 py-1 text-sm transition-colors {$pageDisplayMode === 'double'
-								? 'bg-orange-600'
+								?
+'bg-orange-600'
 								: 'bg-gray-700 hover:bg-gray-600'}"
 						>
 							صفحتان
@@ -257,10 +314,12 @@
 
 				<!-- svelte-ignore a11y_consider_explicit_label -->
 				<button on:click={() => (showSettings = !showSettings)} class="text-gray-300 hover:text-white" title="إعدادات القارئ">
-					<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 0 2l-.15.08a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1 0-2l.15-.08a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+					<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 
+0 .73 2.73l.15.1a2 2 0 0 1 0 2l-.15.08a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1 0-2l.15-.08a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
 				</button>
 				<button on:click={toggleFullscreen} class="text-gray-300 hover:text-white" title="تبديل وضع ملء الشاشة (F)">
-					{#if isFullscreen}
+					{#if 
+isFullscreen}
 						<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" /></svg>
 					{:else}
 						<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" /></svg>
@@ -294,12 +353,14 @@
 		</div>
 
 		<div
-             class="h-1 w-full bg-gray-600 cursor-pointer"
+     
+        class="h-1 w-full bg-gray-600 cursor-pointer"
             on:click={handleProgressClick}
             role="button"
             tabindex="0"
             aria-label="الانتقال إلى صفحة"
-            on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleProgressClick(e as any); }}
+            on:keydown={(e) => { if (e.key === 'Enter' ||
+e.key === ' ') handleProgressClick(e as any); }}
         >
             <div class="h-1 bg-orange-500 pointer-events-none" style="width: {progress}%"></div>
         </div>
@@ -311,7 +372,8 @@
 			<div class="grid grid-cols-2 gap-2">
 				{#each pages as page, i}
 					<a
-						href={$readingMode === 'vertical' ? `#page-${i}` : '#'}
+						href={$readingMode === 'vertical' ?
+`#page-${i}` : '#'}
 						on:click={() => {
 							if ($readingMode === 'horizontal') {
 								currentPageIndex = i;
@@ -320,7 +382,8 @@
 						}}
 						class="thumbnail-item group relative rounded border-2"
 						class:border-orange-500={$readingMode === 'horizontal' && currentPageIndex === i}
-						class:border-transparent={$readingMode !== 'horizontal' || currentPageIndex !== i}
+						class:border-transparent={$readingMode !== 'horizontal' ||
+currentPageIndex !== i}
 					>
 						<img
 							src="{baseCdnUrl}/{page.image_path}?width=150&quality=75"
@@ -348,7 +411,8 @@
 					<img
 						bind:this={imageElements[i]}
 						id="page-{i}"
-						src={i < 2 ? `${baseCdnUrl}/${page.image_path}?width=1200&quality=85` : placeholderSrc}
+						src={i < 2 ?
+`${baseCdnUrl}/${page.image_path}?width=1200&quality=85` : placeholderSrc}
 						data-src="{baseCdnUrl}/{page.image_path}?width=1200&quality=85"
 						alt="صفحة رقم {page.page_number}"
 						class="scroll-mt-20 mx-auto mb-2 shadow-md"
@@ -360,7 +424,8 @@
 					/>
 				{/each}
 			{:else}
-				{@const step = $pageDisplayMode === 'double' ? 2 : 1}
+				{@const step = $pageDisplayMode === 'double' ?
+2 : 1}
 				<div class="flex min-h-[70vh] w-full flex-col items-center justify-center">
 					<div class="relative flex w-full max-w-7xl items-center justify-center">
 						<!-- svelte-ignore a11y_consider_explicit_label -->
@@ -380,7 +445,8 @@
 								src="{baseCdnUrl}/{pages[currentPageIndex].image_path}?width=1200&quality=85"
 								alt="صفحة رقم {pages[currentPageIndex].page_number}"
 								class="object-contain shadow-md"
-								class:fit-width-horizontal-single={($pageDisplayMode === 'single' || !pages[currentPageIndex + 1]) && $imageFitMode !== 'fit-height'}
+								class:fit-width-horizontal-single={($pageDisplayMode === 'single' ||
+!pages[currentPageIndex + 1]) && $imageFitMode !== 'fit-height'}
 								class:fit-width-horizontal-double={$pageDisplayMode === 'double' && pages[currentPageIndex + 1] && $imageFitMode !== 'fit-height'}
 								class:fit-height={$imageFitMode === 'fit-height'}
 								class:original-size={$imageFitMode === 'original'}
@@ -395,6 +461,7 @@
 									class:fit-height={$imageFitMode === 'fit-height'}
 									class:original-size={$imageFitMode === 'original'}
                             
+ 
                                      on:error={onImageError}
 								/>
 							{/if}
@@ -413,7 +480,8 @@
 						{#if $pageDisplayMode === 'double' && pages[currentPageIndex + 1]}
 							صفحة {currentPageIndex + 1}-{currentPageIndex + 2} من {pages.length}
 						{:else}
-							صفحة {currentPageIndex + 1} من {pages.length}
+							صفحة {currentPageIndex + 1} من 
+{pages.length}
 						{/if}
 					</p>
 				</div>
@@ -431,7 +499,8 @@
   
        <a
         href="/manga/{manga.slug}/{currentChapter - 1}"
-        class="rounded bg-orange-600 px-6 py-2 transition-colors hover:bg-orange-700 {currentChapter <= 1 ? 'pointer-events-none opacity-50' : ''}"
+        class="rounded bg-orange-600 px-6 py-2 transition-colors hover:bg-orange-700 {currentChapter <= 1 ?
+'pointer-events-none opacity-50' : ''}"
     >الفصل السابق</a>
     
     <a
@@ -453,7 +522,8 @@
 						name="content"
 						rows="4"
 						placeholder="أضف تعليقك هنا..."
-						class="w-full rounded border border-gray-600 bg-gray-700 p-2 text-white focus:border-orange-500 focus:outline-none"
+						class="w-full rounded border border-gray-600 bg-gray-700 p-2 
+text-white focus:border-orange-500 focus:outline-none"
 						required
 					></textarea>
 					{#if form?.error}
@@ -472,7 +542,7 @@
 				<p>
 					<a href="/login" class="font-bold text-orange-500 hover:underline">سجل دخولك</a> لتتمكن من
 					إضافة تعليق.
-				</p>
+</p>
 			</div>
 		{/if}
 		<div class="space-y-6">

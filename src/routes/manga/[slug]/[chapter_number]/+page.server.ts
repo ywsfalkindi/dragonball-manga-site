@@ -9,75 +9,92 @@ import { JSDOM } from 'jsdom';
 const window = new JSDOM('').window;
 const purify = DOMPurify(window);
 
-export const load: PageServerLoad = async ({ locals, params }) => {
+export const load: PageServerLoad = async ({ locals, params, url }) => {
 	try {
 		const manga = await pb.collection('mangas').getFirstListItem(`slug = "${params.slug}"`);
-		const chapter = await pb.collection('chapters').getFirstListItem(`manga.id = "${manga.id}" && chapter_number = ${params.chapter_number}`);
+		const chapter = await pb
+			.collection('chapters')
+			.getFirstListItem(`manga.id = "${manga.id}" && chapter_number = ${params.chapter_number}`);
+
+		const pageFromUrl = Number(url.searchParams.get('page'));
+		let lastPageRead = 1;
 
 		if (locals.user) {
 			try {
-				// التحقق مما إذا كان المستخدم قد قرأ هذا الفصل من قبل لمنع تكرار XP
-				await pb.collection('read_history').getFirstListItem(`user.id = "${locals.user.id}" && chapter.id = "${chapter.id}"`);
+				const historyRecord = await pb
+					.collection('read_history')
+					.getFirstListItem(`user.id = "${locals.user.id}" && chapter.id = "${chapter.id}"`);
+				lastPageRead = historyRecord.last_page_read || 1;
 			} catch (err: any) {
-				// إذا لم يقرأه من قبل (err.status === 404)
 				if (err.status === 404) {
-					await pb.collection('read_history').create({ user: locals.user.id, chapter: chapter.id, manga: manga.id });
-					await grantXp(locals.user.id, 25); // ✨ منح 25 XP
+					await pb.collection('read_history').create({
+						user: locals.user.id,
+						chapter: chapter.id,
+						manga: manga.id,
+						last_page_read: 1
+					});
+					await grantXp(locals.user.id, 25);
+					lastPageRead = 1;
 				}
 			}
 		}
 
-		// --- بداية التحسين لنظام التعليقات ---
-        const topLevelComments = await pb.collection('comments').getFullList({
-            filter: `chapter = "${chapter.id}" && parentComment = null`,
-            sort: '-created',
-            expand: 'user,likes'
-        });
+		if (pageFromUrl > 0) {
+			lastPageRead = pageFromUrl;
+		}
 
-        const replies = await pb.collection('comments').getFullList({
-            filter: `chapter = "${chapter.id}" && parentComment != null`,
-            sort: '+created',
-            expand: 'user,likes'
-        });
+		const topLevelComments = await pb.collection('comments').getFullList({
+			filter: `chapter = "${chapter.id}" && parentComment = null`,
+			sort: '-created',
+			expand: 'user,likes'
+		});
 
-        const commentsById = new Map();
-        topLevelComments.forEach(c => {
-            c.replies = [];
-            commentsById.set(c.id, c);
-        });
-        replies.forEach(r => {
-            const parent = commentsById.get(r.parentComment);
-            if (parent) {
-                parent.replies.push(r);
-            }
-        });
+		const replies = await pb.collection('comments').getFullList({
+			filter: `chapter = "${chapter.id}" && parentComment != null`,
+			sort: '+created',
+			expand: 'user,likes'
+		});
 
-        const comments = topLevelComments;
-        // --- نهاية التحسين ---
+		const commentsById = new Map();
+		topLevelComments.forEach((c) => {
+			c.replies = [];
+			commentsById.set(c.id, c);
+		});
+		replies.forEach((r) => {
+			const parent = commentsById.get(r.parentComment);
+			if (parent) {
+				parent.replies.push(r);
+			}
+		});
 
-        const [pages, nextChapter] = await Promise.all([
-            pb.collection('pages').getFullList({
-                filter: `chapter = "${chapter.id}"`,
-                sort: 'page_number'
-            }),
-            pb.collection('chapters').getFirstListItem(`manga.id = "${manga.id}" && chapter_number = ${Number(params.chapter_number) + 1}`).catch(() => null)
-        ]);
-        
-        pages.forEach((page) => {
-            page.page_image_url = pb.files.getURL(page, page.image_path);
-        });
+		const comments = topLevelComments;
 
-        return { 
-            user: locals.user || null, 
-            manga, 
-            chapter, 
-            pages, 
-            comments,
-            nextChapterExists: !!nextChapter
-        };
+		const [pages, nextChapter] = await Promise.all([
+			pb.collection('pages').getFullList({
+				filter: `chapter = "${chapter.id}"`,
+				sort: 'page_number'
+			}),
+			pb
+				.collection('chapters')
+				.getFirstListItem(`manga.id = "${manga.id}" && chapter_number = ${Number(params.chapter_number) + 1}`)
+				.catch(() => null)
+		]);
 
+		pages.forEach((page) => {
+			page.page_image_url = pb.files.getURL(page, page.image_path);
+		});
+
+		return {
+			user: locals.user || null,
+			manga,
+			chapter,
+			pages,
+			comments,
+			nextChapterExists: !!nextChapter,
+			lastPageRead
+		};
 	} catch (err) {
-		console.error("CRASH REPORT:", err);
+		console.error('CRASH REPORT:', err);
 		throw error(404, 'المانجا أو الفصل المطلوب غير موجود');
 	}
 };
