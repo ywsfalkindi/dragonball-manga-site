@@ -1,68 +1,155 @@
 <script lang="ts">
-    import type { LayoutData } from './$types';
-    import "../app.css";
-    import { navigating, page } from '$app/stores';
-    import DragonBall from '$lib/components/DragonBall.svelte';
-    import { onMount } from 'svelte';
-    import { fly } from 'svelte/transition';
+	import type { LayoutData } from './$types';
+	import '../app.css';
+	import { navigating, page } from '$app/stores';
+	import DragonBall from '$lib/components/DragonBall.svelte';
+	import { onMount } from 'svelte';
+	import { fly, slide } from 'svelte/transition'; // ✨ تم استيراد دالة slide هنا
 
-    export let data: LayoutData;
-    // ✨ التحسين: إظهار رسالة عند تسجيل الخروج ✨
-    let showLogoutToast = false;
-    onMount(() => {
-        if ($page.url.searchParams.get('logout') === 'true') {
-            showLogoutToast = true;
-            setTimeout(() => {
-                showLogoutToast = false;
-            }, 3000);
-        }
-    });
+	export let data: LayoutData;
+	let showLogoutToast = false;
+	let isMenuOpen = false;
+
+	// ✨ بداية الإصلاح: إغلاق القائمة عند التنقل ✨
+	$: if ($navigating) {
+		isMenuOpen = false;
+	}
+	// ✨ نهاية الإصلاح ✨
+
+	onMount(() => {
+		if ($page.url.searchParams.get('logout') === 'true') {
+			showLogoutToast = true;
+			setTimeout(() => {
+				showLogoutToast = false;
+			}, 3000);
+		}
+	});
 </script>
 
 {#if $navigating}
-    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
-        <div class="w-16 h-16 border-4 border-t-orange-500 border-gray-600 rounded-full animate-spin"></div>
-    </div>
+	<div class="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50">
+		<div class="h-16 w-16 animate-spin rounded-full border-4 border-t-orange-500 border-gray-600"
+		></div>
+	</div>
 {/if}
 
 {#if data.dragonBall}
-    <DragonBall ball_number={data.dragonBall.ball_number} find_token={data.dragonBall.find_token} />
+	<DragonBall ball_number={data.dragonBall.ball_number} find_token={data.dragonBall.find_token} />
 {/if}
 
 {#if showLogoutToast}
-<div in:fly={{ y: -20, duration: 300 }} out:fly={{ y: -20, duration: 300 }} class="fixed top-20 right-1/2 translate-x-1/2 z-[9999] bg-green-600 text-white py-2 px-6 rounded-lg shadow-lg">
-    تم تسجيل خروجك بنجاح!
-</div>
+	<div
+		in:fly={{ y: -20, duration: 300 }}
+		out:fly={{ y: -20, duration: 300 }}
+		class="fixed top-20 right-1/2 z-[9999] translate-x-1/2 rounded-lg bg-green-600 py-2 px-6 text-white shadow-lg"
+	>
+		تم تسجيل خروجك بنجاح!
+	</div>
 {/if}
 
-<div class="min-h-screen bg-gray-900 text-white font-[Tajawal]">
-    <nav class="bg-gray-800 text-white p-4 shadow-md sticky top-0 z-50">
-    <div class="container mx-auto flex justify-between items-center flex-wrap gap-4">
-        <a href="/" class="text-2xl font-bold text-orange-500 hover:text-orange-400">
-            موقع دراغون بول
-        </a>
+<div class="min-h-screen bg-gray-900 font-[Tajawal] text-white">
+	<nav class="sticky top-0 z-50 bg-gray-800 p-4 text-white shadow-md">
+		<div class="container mx-auto flex flex-wrap items-center justify-between gap-4">
+			<a href="/" class="text-2xl font-bold text-orange-500 hover:text-orange-400">
+				موقع دراغون بول
+			</a>
 
-        <div class="flex items-center gap-x-4 md:gap-x-6 text-sm md:text-base">
-            
-            <a href="/quizzes" class="font-semibold hover:text-orange-400 transition-colors">الاختبارات</a>
-            <a href="/leaderboard" class="font-semibold hover:text-orange-400 transition-colors">لوحة الصدارة</a>
-            <div class="w-px h-6 bg-gray-600 hidden sm:block"></div>
+			<button
+				on:click={() => (isMenuOpen = !isMenuOpen)}
+				class="inline-block rounded p-2 text-gray-300 hover:bg-gray-700 md:hidden"
+				aria-label="Toggle menu"
+			>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					width="24"
+					height="24"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line
+						x1="3"
+						y1="18"
+						x2="21"
+						y2="18"
+					></line></svg
+				>
+			</button>
 
-        
+			<div class="hidden items-center gap-x-4 text-base md:flex md:gap-x-6">
+				<a href="/quizzes" class="font-semibold transition-colors hover:text-orange-400"
+					>الاختبارات</a
+				>
+				<a href="/leaderboard" class="font-semibold transition-colors hover:text-orange-400"
+					>لوحة الصدارة</a
+				>
+				<div class="hidden h-6 w-px bg-gray-600 sm:block"></div>
 
-            {#if data.user}
-                <div class="flex items-center gap-x-4">
-                    <span class="hidden sm:inline">أهلاً بك، {data.user.name}</span>
-                    <a href="/profile" class="py-2 px-4 bg-orange-600 rounded hover:bg-orange-700 whitespace-nowrap">ملفي الشخصي</a>
-                </div>
-            {:else}
-                <div class="flex items-center gap-x-2">
-                    <a href="/login" class="py-2 px-4 hover:bg-gray-700 rounded whitespace-nowrap">تسجيل الدخول</a>
-                    <a href="/signup" class="py-2 px-4 bg-orange-600 rounded hover:bg-orange-700 whitespace-nowrap">إنشاء حساب</a>
-                </div>
-            {/if}
-        </div>
-    </div>
-</nav>
-    <slot />
+				{#if data.user}
+					<div class="flex items-center gap-x-4">
+						<span class="hidden sm:inline">أهلاً بك، {data.user.name}</span>
+						<a
+							href="/profile"
+							class="whitespace-nowrap rounded bg-orange-600 py-2 px-4 hover:bg-orange-700"
+							>ملفي الشخصي</a
+						>
+					</div>
+				{:else}
+					<div class="flex items-center gap-x-2">
+						<a
+							href="/login"
+							class="whitespace-nowrap rounded py-2 px-4 hover:bg-gray-700"
+							>تسجيل الدخول</a
+						>
+						<a
+							href="/signup"
+							class="whitespace-nowrap rounded bg-orange-600 py-2 px-4 hover:bg-orange-700"
+							>إنشاء حساب</a
+						>
+					</div>
+				{/if}
+			</div>
+
+			{#if isMenuOpen}
+				<div
+					class="mt-4 flex w-full basis-full flex-col items-end gap-y-4 md:hidden"
+					transition:slide
+				>
+					<a href="/quizzes" class="font-semibold transition-colors hover:text-orange-400"
+						>الاختبارات</a
+					>
+					<a href="/leaderboard" class="font-semibold transition-colors hover:text-orange-400"
+						>لوحة الصدارة</a
+					>
+					<div class="h-px w-full bg-gray-700"></div>
+					{#if data.user}
+						<div class="flex w-full flex-col items-end gap-y-4">
+							<span class="text-gray-300" dir="rtl">أهلاً بك، {data.user.name}</span>
+							<a
+								href="/profile"
+								class="w-full whitespace-nowrap rounded bg-orange-600 py-2 px-4 text-center hover:bg-orange-700"
+								>ملفي الشخصي</a
+							>
+						</div>
+					{:else}
+						<div class="flex w-full flex-col items-stretch gap-y-2">
+							<a
+								href="/login"
+								class="whitespace-nowrap rounded py-2 px-4 text-center hover:bg-gray-700"
+								>تسجيل الدخول</a
+							>
+							<a
+								href="/signup"
+								class="whitespace-nowrap rounded bg-orange-600 py-2 px-4 text-center hover:bg-orange-700"
+								>إنشاء حساب</a
+							>
+						</div>
+					{/if}
+				</div>
+			{/if}
+		</div>
+	</nav>
+	<slot />
 </div>

@@ -6,6 +6,13 @@ import type { Actions, PageServerLoad } from './$types';
 export const load: PageServerLoad = async ({ locals }) => {
 	if (!locals.user) throw redirect(303, '/login');
 
+	// ✨ بداية الإصلاح: جلب بيانات المستخدم كاملة وإنشاء رابط الأفاتار
+	const user = await pb.collection('users').getOne(locals.user.id);
+	if (user.avatar) {
+		user.avatarUrl = pb.files.getURL(user, user.avatar, { thumb: '100x100' });
+	}
+	// ✨ نهاية الإصلاح
+
 	const [favorites, readHistory, userDragonBalls] = await Promise.all([
 		pb.collection('favorites').getFullList({
 			filter: `user.id = "${locals.user.id}"`,
@@ -33,7 +40,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	};
 
 	return {
-		user: locals.user,
+		user, // تم استبدال locals.user بالبيانات الجديدة الكاملة
 		favorites,
 		stats,
 		collectedBalls: userDragonBalls?.collected_balls || []
@@ -95,6 +102,38 @@ export const actions: Actions = {
         return { passwordSuccess: 'تم تغيير كلمة المرور بنجاح!' };
     },
 
+	updateAvatar: async ({ locals, request }) => {
+        if (!locals.user) throw redirect(303, '/login');
+
+        const formData = await request.formData();
+        const avatar = formData.get('avatar') as File;
+
+        if (!avatar || avatar.size === 0) {
+            return fail(400, { avatarError: 'يرجى اختيار ملف صورة.' });
+        }
+
+        try {
+            await pb.collection('users').update(locals.user.id, { avatar });
+        } catch (err) {
+            console.error(err);
+            return fail(500, { avatarError: 'فشل رفع الصورة. حاول مرة أخرى.' });
+        }
+
+        return { avatarSuccess: 'تم تحديث الصورة الرمزية بنجاح!' };
+    },
+
+    deleteAvatar: async ({ locals }) => {
+        if (!locals.user) throw redirect(303, '/login');
+
+        try {
+            await pb.collection('users').update(locals.user.id, { avatar: null });
+        } catch (err) {
+            console.error(err);
+            return fail(500, { avatarError: 'فشل حذف الصورة.' });
+        }
+
+        return { avatarSuccess: 'تم حذف الصورة الرمزية.' };
+    },
 
 	// 1. الإجراء الأول: استدعاء التنين وعرض الأمنيات
 	summonShenron: async ({ locals }) => {

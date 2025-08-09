@@ -4,6 +4,7 @@
 	import { collectedBallsStore } from '$lib/stores/dragonballs';
 	import { fly } from 'svelte/transition';
 	import { onMount } from 'svelte';
+	import { enhance } from '$app/forms'; // ✨ استيراد enhance
 
 	export let data: PageData;
 	export let form: ActionData;
@@ -14,13 +15,21 @@
 	let selectedWishes: any[] = [];
 	let finalMessage = '';
 
-	// Use onMount to manage messages after the page is fully loaded
+	// ✨ متغيرات جديدة للرسائل
 	let passwordSuccessMessage = '';
+	let avatarSuccessMessage = '';
+
 	onMount(() => {
 		if (form?.passwordSuccess) {
 			passwordSuccessMessage = form.passwordSuccess;
 			setTimeout(() => {
 				passwordSuccessMessage = '';
+			}, 3000);
+		}
+		if (form?.avatarSuccess) {
+			avatarSuccessMessage = form.avatarSuccess;
+			setTimeout(() => {
+				avatarSuccessMessage = '';
 			}, 3000);
 		}
 	});
@@ -45,14 +54,11 @@
 	// Use on:animationend to sequence the animations
 	function handleAnimationEnd(event: AnimationEvent) {
 		if (event.animationName === 'circle-in') {
-			animationStep = 2.5;
-			// Trigger shake
+			animationStep = 2.5; // Trigger shake
 		} else if (event.animationName === 'screen-shake') {
-			animationStep = 2;
-			// Trigger flash
+			animationStep = 2; // Trigger flash
 		} else if (event.animationName === 'flash-effect') {
-			animationStep = 3;
-			// Trigger Shenron
+			animationStep = 3; // Trigger Shenron
 		}
 	}
 </script>
@@ -121,30 +127,82 @@
 	</div>
 {/if}
 
-<div class="min-h-screen bg-gray-900 text-white font-[Tajawal] p-8" dir="rtl" >
+<div class="min-h-screen bg-gray-900 text-white font-[Tajawal] p-8" dir="rtl">
 	<div class="container mx-auto">
-		<div class="flex flex-wrap justify-between items-center mb-10 gap-4">
-			<div>
-				<h1 class="text-4xl font-bold">ملفي الشخصي</h1>
-				<p class="text-gray-400 mt-1">مرحباً بعودتك ، {data.user?.username}</p>
-				{#if data.user.title}
-					<span
-						class="mt-2 inline-block bg-yellow-500 text-black text-sm font-bold py-1 px-3 rounded-full"
-						>{data.user.title}</span
-					>
-				{/if}
+		{#if avatarSuccessMessage}
+			<div
+				class="fixed top-20 right-1/2 translate-x-1/2 z-[9999] bg-green-600 text-white py-2 px-6 rounded-lg shadow-lg"
+				transition:fly={{ y: -20, duration: 300 }}
+			>
+				{avatarSuccessMessage}
 			</div>
-			<form method="POST" action="?/logout">
-				<button class="bg-red-600 py-2 px-4 rounded hover:bg-red-700 transition-colors"
-					>تسجيل الخروج</button
+		{/if}
+
+		<div class="mb-10 flex flex-col items-center gap-4 text-center">
+	<div class="relative">
+		{#if data.user.avatarUrl}
+			<img
+				src={data.user.avatarUrl}
+				alt="الصورة الرمزية لـ {data.user.username}"
+				class="h-28 w-28 rounded-full border-4 border-gray-700 object-cover"
+			/>
+		{:else}
+			<div
+				class="flex h-28 w-28 items-center justify-center rounded-full border-4 border-gray-700 bg-gray-700 text-4xl font-bold text-white"
+			>
+				{(data.user.username || '?').charAt(0).toUpperCase()}
+			</div>
+		{/if}
+	</div>
+
+	<div>
+		<h1 class="text-4xl font-bold">ملفي الشخصي</h1>
+		<p class="mt-1 text-gray-400">مرحباً بعودتك، {data.user?.username}</p>
+		{#if data.user.title}
+			<span class="mt-2 inline-block rounded-full bg-yellow-500 py-1 px-2 text-xs font-bold text-black">
+				{data.user.title}
+			</span>
+		{/if}
+	</div>
+
+	<div class="flex items-center gap-2">
+		<form method="POST" action="?/updateAvatar" enctype="multipart/form-data" use:enhance>
+			<label
+				for="avatar-upload"
+				class="cursor-pointer rounded-md bg-gray-700 py-1 px-3 text-sm text-white transition-colors hover:bg-gray-600"
+				>تغيير الصورة</label
+			>
+			<input
+				type="file"
+				name="avatar"
+				id="avatar-upload"
+				class="hidden"
+				accept="image/*"
+				on:change={(e) => e.currentTarget.form?.requestSubmit()}
+			/>
+		</form>
+		{#if data.user.avatar}
+			<form method="POST" action="?/deleteAvatar" use:enhance>
+				<button
+					type="submit"
+					class="rounded-md bg-red-500/10 py-1 px-3 text-sm text-red-400 transition-colors hover:bg-red-500/20"
+					>حذف</button
 				>
 			</form>
-		</div>
+		{/if}
+	</div>
 
-        <div class="bg-gray-800 p-6 rounded-lg shadow-lg mb-12" dir="rtl">
+	<form method="POST" action="?/logout" class="mt-4 w-full max-w-xs">
+		<button class="w-full rounded bg-red-600 py-2 px-4 hover:bg-red-700"> تسجيل الخروج </button>
+	</form>
+</div>
+
+		<div class="bg-gray-800 p-6 rounded-lg shadow-lg mb-12" dir="rtl">
 			<div class="flex justify-between items-center mb-2">
 				<span class="font-bold text-orange-400">مستوى الطاقة : {data.user.power_level}</span>
-				<span class="text-sm text-gray-400">{data.user.xp} / {data.user.xp_to_next_level} XP</span>
+				<span class="text-sm text-gray-400"
+					>{data.user.xp} / {data.user.xp_to_next_level} XP</span
+				>
 			</div>
 			<div class="w-full bg-gray-700 rounded-full h-4">
 				<div
@@ -156,7 +214,7 @@
 
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
 			<div class="bg-gray-800 p-6 rounded-lg shadow-lg">
-				<h2 class="text-2xl font-bold mb-4" dir="rtl" >إحصائياتي</h2>
+				<h2 class="text-2xl font-bold mb-4" dir="rtl">إحصائياتي</h2>
 				<div class="flex justify-around items-center">
 					<div class="text-center">
 						<h3 class="text-xl text-gray-400">المانجا المفضلة</h3>
@@ -164,8 +222,9 @@
 					</div>
 					<div class="text-center">
 						<h3 class="text-xl text-gray-400">الفصول المقروءة</h3>
-						<p class="text-5xl font-bold mt-2 text-orange-500">{data.stats.totalChaptersRead}</p>
-						<!-- ✨ التحسين: إضافة رابط لصفحة سجل القراءة الكامل ✨ -->
+						<p class="text-5xl font-bold mt-2 text-orange-500">
+							{data.stats.totalChaptersRead}
+						</p>
 						<a href="/profile/history" class="text-sm mt-2 text-blue-400 hover:underline"
 							>عرض السجل الكامل</a
 						>
@@ -220,9 +279,9 @@
 			</div>
 		</div>
 
-		<h2 class="text-3xl font-bold mb-6" dir="rtl" >كرات التنين</h2>
+		<h2 class="text-3xl font-bold mb-6" dir="rtl">كرات التنين</h2>
 		<div class="bg-gray-800 p-6 rounded-lg shadow-lg">
-			<div class="flex justify-center items-center gap-4 mb-6">
+			<div class="flex flex-wrap justify-center items-center gap-4 mb-6">
 				{#each { length: 7 } as _, i}
 					{@const ballNum = i + 1}
 					{@const hasBall = $collectedBallsStore.includes(ballNum)}
@@ -247,7 +306,7 @@
 					class="w-full bg-yellow-500 text-gray-900 font-bold py-3 px-4 rounded-lg hover:bg-yellow-400 transition-colors disabled:bg-gray-600 disabled:cursor-not-allowed"
 					disabled={$collectedBallsStore.length < 7 || showSummoningScene}
 				>
-					🐉 استدعاء شينرون!
+					 استدعاء شينرون
 				</button>
 			</form>
 			{#if form?.error && !form.wishes}
@@ -255,7 +314,7 @@
 			{/if}
 		</div>
 
-		<h2 class="text-3xl font-bold mb-6 mt-12" dir="rtl" >قائمتي المفضلة</h2>
+		<h2 class="text-3xl font-bold mb-6 mt-12" dir="rtl">قائمتي المفضلة</h2>
 		{#if data.favorites.length > 0}
 			<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
 				{#each data.favorites as fav (fav.id)}
@@ -265,7 +324,7 @@
 				{/each}
 			</div>
 		{:else}
-			<div class="text-center py-10 bg-gray-800 rounded-lg" dir="rtl" >
+			<div class="text-center py-10 bg-gray-800 rounded-lg" dir="rtl">
 				<p class="text-lg text-gray-400">قائمتك فارغة حالياً</p>
 				<a
 					href="/"
