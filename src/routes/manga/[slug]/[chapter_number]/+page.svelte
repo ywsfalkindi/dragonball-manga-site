@@ -9,6 +9,8 @@
 		verticalPagesGap
 	} from '$lib/stores/settings';
 	import { goto } from '$app/navigation';
+	import { enhance } from '$app/forms';
+	import type { SubmitFunction } from '@sveltejs/kit';
 	import { onMount, onDestroy } from 'svelte';
 	import { browser } from '$app/environment';
 	import { PUBLIC_CDN_URL } from '$env/static/public';
@@ -29,6 +31,21 @@
 	let uiVisible = true;
 	let inactivityTimer: number | NodeJS.Timeout;
 	let updateTimeout: number | NodeJS.Timeout;
+	let newCommentContent = '';
+
+	const handleAddComment: SubmitFunction = () => {
+		return async ({ result }) => {
+			if (result.type === 'success' && result.data?.newComment) {
+				// إذا كان التعليق الجديد هو رد، لن نقم بشيء هنا (سيتم تحديث الصفحة بالكامل لاحقًا)
+				if (!result.data.newComment.parentComment) {
+					// أضف التعليق الجديد إلى بداية قائمة التعليقات
+					comments = [result.data.newComment, ...comments];
+				}
+				// أفرغ مربع النص
+				newCommentContent = '';
+			}
+		};
+	};
 
 	async function updateProgress(pageIndex: number) {
 		if (!user) return;
@@ -633,78 +650,60 @@
 				{/each}
 			{:else}
 				{@const step = $pageDisplayMode === 'double' ? 2 : 1}
-				<div class="flex w-full flex-col items-center justify-center">
-					<div class="relative flex w-full max-w-7xl items-center justify-center">
-						<!-- svelte-ignore a11y_consider_explicit_label -->
-						<button
-							on:click={() => (currentPageIndex = Math.max(0, currentPageIndex - step))}
-							class="absolute left-2 z-10 rounded-full bg-black/50 p-3 transition-opacity hover:bg-black/80 disabled:opacity-0 md:-left-12"
-							disabled={currentPageIndex === 0}
-							title="الصفحة السابقة"
-						>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								width="24"
-								height="24"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2"
-								stroke-linecap="round"
-								stroke-linejoin="round"><path d="m15 18-6-6 6-6" /></svg
-							>
-						</button>
-						<div
-							class="flex items-start justify-center gap-2"
-							class:fit-height-container={$imageFitMode === 'fit-height'}
-						>
+				<div class="relative flex w-full flex-grow flex-col items-center justify-center">
+					<div
+						class="flex items-start justify-center gap-2"
+						class:fit-height-container={$imageFitMode === 'fit-height'}
+					>
+						<img
+							src="{baseCdnUrl}/{pages[currentPageIndex].image_path}?width=1200&quality=85"
+							alt="صفحة رقم {pages[currentPageIndex].page_number}"
+							class="pointer-events-none object-contain shadow-md"
+							class:fit-width-horizontal-single={($pageDisplayMode === 'single' ||
+								!pages[currentPageIndex + 1]) &&
+								$imageFitMode !== 'fit-height'}
+							class:fit-width-horizontal-double={$pageDisplayMode === 'double' &&
+								pages[currentPageIndex + 1] &&
+								$imageFitMode !== 'fit-height'}
+							class:fit-height={$imageFitMode === 'fit-height'}
+							class:original-size={$imageFitMode === 'original'}
+							on:error={onImageError}
+						/>
+						{#if $pageDisplayMode === 'double' && pages[currentPageIndex + 1]}
 							<img
-								src="{baseCdnUrl}/{pages[currentPageIndex].image_path}?width=1200&quality=85"
-								alt="صفحة رقم {pages[currentPageIndex].page_number}"
-								class="object-contain shadow-md"
-								class:fit-width-horizontal-single={($pageDisplayMode === 'single' ||
-									!pages[currentPageIndex + 1]) &&
-									$imageFitMode !== 'fit-height'}
-								class:fit-width-horizontal-double={$pageDisplayMode === 'double' &&
-									pages[currentPageIndex + 1] &&
-									$imageFitMode !== 'fit-height'}
+								src="{baseCdnUrl}/{pages[currentPageIndex + 1].image_path}?width=1200&quality=85"
+								alt="صفحة رقم {pages[currentPageIndex + 1].page_number}"
+								class="pointer-events-none object-contain shadow-md"
+								class:fit-width-horizontal-double={$imageFitMode !== 'fit-height'}
 								class:fit-height={$imageFitMode === 'fit-height'}
 								class:original-size={$imageFitMode === 'original'}
 								on:error={onImageError}
 							/>
-							{#if $pageDisplayMode === 'double' && pages[currentPageIndex + 1]}
-								<img
-									src="{baseCdnUrl}/{pages[currentPageIndex + 1].image_path}?width=1200&quality=85"
-									alt="صفحة رقم {pages[currentPageIndex + 1].page_number}"
-									class="object-contain shadow-md"
-									class:fit-width-horizontal-double={$imageFitMode !== 'fit-height'}
-									class:fit-height={$imageFitMode === 'fit-height'}
-									class:original-size={$imageFitMode === 'original'}
-									on:error={onImageError}
-								/>
-							{/if}
-						</div>
-						<!-- svelte-ignore a11y_consider_explicit_label -->
-						<button
-							on:click={() =>
-								(currentPageIndex = Math.min(pages.length - 1, currentPageIndex + step))}
-							class="absolute right-2 z-10 rounded-full bg-black/50 p-3 transition-opacity hover:bg-black/80 disabled:opacity-0 md:-right-12"
-							disabled={currentPageIndex >= pages.length - step}
-							title="الصفحة التالية"
-						>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								width="24"
-								height="24"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2"
-								stroke-linecap="round"
-								stroke-linejoin="round"><path d="m9 18 6-6-6-6" /></svg
-							>
-						</button>
+						{/if}
 					</div>
+
+					<div
+						class="absolute inset-0 flex"
+						dir={$readingDirection === 'rtl' ? 'rtl' : 'ltr'}
+						on:contextmenu|preventDefault
+					>
+						<!-- svelte-ignore element_invalid_self_closing_tag -->
+						<div
+							class="h-full flex-1 cursor-pointer"
+							on:click={() => (currentPageIndex = Math.max(0, currentPageIndex - step))}
+							aria-label="الصفحة السابقة"
+						/>
+						<!-- svelte-ignore element_invalid_self_closing_tag -->
+						<div class="h-full flex-1" on:click={resetTimer} />
+						<!-- svelte-ignore element_invalid_self_closing_tag -->
+						<div
+							class="h-full flex-1 cursor-pointer"
+							on:click={() =>
+								(currentPageIndex = Math.min(pages.length - step, currentPageIndex + step))}
+							aria-label="الصفحة التالية"
+						/>
+					</div>
+
 					<p class="mt-4 text-gray-400">
 						{#if $pageDisplayMode === 'double' && pages[currentPageIndex + 1]}
 							صفحة {currentPageIndex + 1}-{currentPageIndex + 2} من {pages.length}
@@ -746,16 +745,16 @@
 			التعليقات ({comments.length})
 		</h2>
 		{#if user}
-			<form method="POST" action="?/addComment" class="mb-8">
+			<form method="POST" action="?/addComment" use:enhance={handleAddComment} class="mb-8">
 				<input type="hidden" name="parentId" value="" />
 				<div class="rounded-lg bg-gray-800 p-4">
 					<textarea
 						name="content"
 						rows="4"
 						placeholder="أضف تعليقك هنا..."
-						class="w-full rounded border border-gray-600 bg-gray-700 p-2
-text-white focus:border-orange-500 focus:outline-none"
+						class="w-full rounded border border-gray-600 bg-gray-700 p-2 text-white focus:border-orange-500 focus:outline-none"
 						required
+						bind:value={newCommentContent}
 					></textarea>
 					{#if form?.error}
 						<p class="mt-2 text-sm text-red-500">{form.error}</p>
