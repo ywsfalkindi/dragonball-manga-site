@@ -14,3 +14,9 @@ export const readerBackgroundColor = persisted('readerBackgroundColor', 'black')
 
 // الخيارات: 'fit-width', 'fit-height', 'original'
 export const imageFitMode = persisted('imageFitMode', 'fit-width');
+
+// ✨ الإضافة الجديدة لهذه الخطوة ✨
+// الخيارات: 'rtl' (يمين لليسار), 'ltr' (يسار ليمين)
+export const readingDirection = persisted('readingDirection', 'rtl');
+
+export const verticalPagesGap = persisted('verticalPagesGap', 4);

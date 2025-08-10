@@ -4,7 +4,9 @@
 		pageDisplayMode,
 		readingMode,
 		readerBackgroundColor,
-		imageFitMode
+		imageFitMode,
+		readingDirection,
+		verticalPagesGap
 	} from '$lib/stores/settings';
 	import { goto } from '$app/navigation';
 	import { onMount, onDestroy } from 'svelte';
@@ -217,15 +219,19 @@
 
 		if ($readingMode === 'horizontal') {
 			const step = $pageDisplayMode === 'double' ? 2 : 1;
-			if (event.key === 'ArrowRight') {
+			// تحديد مفاتيح التنقل بناءً على اتجاه القراءة
+			const goNextKey = $readingDirection === 'rtl' ? 'ArrowLeft' : 'ArrowRight';
+			const goPrevKey = $readingDirection === 'rtl' ? 'ArrowRight' : 'ArrowLeft';
+
+			if (event.key === goNextKey) {
 				currentPageIndex = Math.min(pages.length - 1, currentPageIndex + step);
-			} else if (event.key === 'ArrowLeft') {
+			} else if (event.key === goPrevKey) {
 				currentPageIndex = Math.max(0, currentPageIndex - step);
 			}
 		} else {
 			if (event.key === 'ArrowRight' && nextChapterExists) {
 				goto(`/manga/${manga.slug}/${currentChapter + 1}`);
-			} else if (event.key === 'ArrowLeft') {
+			} else if (event.key === 'ArrowLeft' && currentChapter > 1) {
 				goto(`/manga/${manga.slug}/${currentChapter - 1}`);
 			}
 		}
@@ -405,52 +411,145 @@
 
 				{#if showSettings}
 					<div
-						class="absolute top-full right-0 z-10 mt-2 w-64 rounded-lg border border-gray-700 bg-gray-800 p-4 text-sm shadow-lg"
+						class="absolute top-full right-0 z-10 mt-2 w-72 rounded-lg border border-gray-700 bg-gray-800 p-4 text-sm shadow-lg"
 					>
-						<div class="mb-4">
+						<div class="mb-4" dir="rtl">
 							<p class="mb-2 font-bold text-white">لون الخلفية</p>
 							<div class="flex gap-2">
-								<!-- svelte-ignore a11y_consider_explicit_label -->
 								<button
 									on:click={() => readerBackgroundColor.set('black')}
 									class:ring-orange-500={$readerBackgroundColor === 'black'}
-									class="h-8 w-8 rounded-full border border-gray-600 bg-black ring-2 ring-transparent"
-								></button>
-								<!-- svelte-ignore a11y_consider_explicit_label -->
+									class="flex h-8 w-8 items-center justify-center rounded-full border border-gray-600 bg-black text-white ring-2 ring-transparent"
+									aria-label="خلفية سوداء"
+								>
+									{#if $readerBackgroundColor === 'black'}✓{/if}
+								</button>
 								<button
 									on:click={() => readerBackgroundColor.set('white')}
 									class:ring-orange-500={$readerBackgroundColor === 'white'}
-									class="h-8 w-8 rounded-full border border-gray-400 bg-white ring-2 ring-transparent"
-								></button>
-								<!-- svelte-ignore a11y_consider_explicit_label -->
+									class="flex h-8 w-8 items-center justify-center rounded-full border border-gray-400 bg-white text-black ring-2 ring-transparent"
+									aria-label="خلفية بيضاء"
+								>
+									{#if $readerBackgroundColor === 'white'}✓{/if}
+								</button>
 								<button
 									on:click={() => readerBackgroundColor.set('#f4e8d8')}
 									class:ring-orange-500={$readerBackgroundColor === '#f4e8d8'}
-									class="h-8 w-8 rounded-full border border-gray-400 bg-[#f4e8d8] ring-2 ring-transparent"
-								></button>
+									class="flex h-8 w-8 items-center justify-center rounded-full border border-gray-400 bg-[#f4e8d8] text-black ring-2 ring-transparent"
+									aria-label="خلفية عتيقة"
+								>
+									{#if $readerBackgroundColor === '#f4e8d8'}✓{/if}
+								</button>
 							</div>
 						</div>
+
 						<div>
-							<p class="mb-2 font-bold text-white">طريقة عرض الصور</p>
+							<p class="mb-2 font-bold text-white" dir="rtl">طريقة عرض الصور</p>
 							<div class="flex flex-col gap-2">
 								<button
 									on:click={() => imageFitMode.set('fit-width')}
 									class:bg-orange-600={$imageFitMode === 'fit-width'}
-									class="w-full rounded bg-gray-700 p-2 text-right hover:bg-gray-600"
-									>ملاءمة العرض</button
+									class="flex w-full items-center justify-end gap-2 rounded bg-gray-700 p-2 text-right hover:bg-gray-600"
 								>
+									<span>ملاءمة العرض</span>
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										width="18"
+										height="18"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										><polyline points="21 16 16 21 21 6 16 11"></polyline><polyline
+											points="3 8 8 3 3 18 8 13"
+										></polyline><line x1="16" y1="4" x2="8" y2="20"></line></svg
+									>
+								</button>
 								<button
 									on:click={() => imageFitMode.set('fit-height')}
 									class:bg-orange-600={$imageFitMode === 'fit-height'}
-									class="w-full rounded bg-gray-700 p-2 text-right hover:bg-gray-600"
-									>ملاءمة الطول</button
+									class="flex w-full items-center justify-end gap-2 rounded bg-gray-700 p-2 text-right hover:bg-gray-600"
 								>
+									<span>ملاءمة الطول</span>
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										width="18"
+										height="18"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										><polyline points="16 3 21 8 6 8 11 3"></polyline><polyline
+											points="8 21 3 16 18 16 13 21"
+										></polyline><line x1="4" y1="16" x2="20" y2="8"></line></svg
+									>
+								</button>
 								<button
 									on:click={() => imageFitMode.set('original')}
 									class:bg-orange-600={$imageFitMode === 'original'}
-									class="w-full rounded bg-gray-700 p-2 text-right hover:bg-gray-600"
-									>الحجم الأصلي</button
+									class="flex w-full items-center justify-end gap-2 rounded bg-gray-700 p-2 text-right hover:bg-gray-600"
 								>
+									<span>الحجم الأصلي</span>
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										width="18"
+										height="18"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										><circle cx="11" cy="11" r="8"></circle><line
+											x1="21"
+											y1="21"
+											x2="16.65"
+											y2="16.65"
+										></line></svg
+									>
+								</button>
+							</div>
+
+							<div class="mt-4 border-t border-gray-700 pt-4" dir="rtl">
+								<p class="mb-2 font-bold text-white">اتجاه القراءة (أفقي)</p>
+								<div class="flex flex-col gap-2">
+									<button
+										on:click={() => readingDirection.set('rtl')}
+										class:bg-orange-600={$readingDirection === 'rtl'}
+										class="flex w-full items-center justify-start gap-2 rounded bg-gray-700 p-2 text-right hover:bg-gray-600"
+									>
+										<span>يمين ← يسار (مانجا)</span>
+									</button>
+									<button
+										on:click={() => readingDirection.set('ltr')}
+										class:bg-orange-600={$readingDirection === 'ltr'}
+										class="flex w-full items-center justify-start gap-2 rounded bg-gray-700 p-2 text-right hover:bg-gray-600"
+									>
+										<span>يسار ← يمين (ويب)</span>
+									</button>
+								</div>
+							</div>
+
+							<div class="mt-4 border-t border-gray-700 pt-4" dir="rtl">
+								<label for="gap-slider" class="mb-2 block font-bold text-white">
+									المسافة بين الصفحات (عمودي): {$verticalPagesGap}px
+								</label>
+								<input
+									type="range"
+									id="gap-slider"
+									min="0"
+									max="100"
+									bind:value={$verticalPagesGap}
+									class="h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-600"
+									disabled={$readingMode !== 'vertical'}
+									title={$readingMode !== 'vertical'
+										? 'هذا الإعداد يعمل في وضع القراءة العمودي فقط'
+										: ''}
+								/>
 							</div>
 						</div>
 					</div>
@@ -523,7 +622,8 @@
 						src={i < 2 ? `${baseCdnUrl}/${page.image_path}?width=1200&quality=85` : placeholderSrc}
 						data-src="{baseCdnUrl}/{page.image_path}?width=1200&quality=85"
 						alt="صفحة رقم {page.page_number}"
-						class="mx-auto mb-2 scroll-mt-20 shadow-md"
+						class="mx-auto scroll-mt-20 shadow-md"
+						style="margin-bottom: {$verticalPagesGap}px;"
 						class:fit-width={$imageFitMode === 'fit-width'}
 						class:fit-height={$imageFitMode === 'fit-height'}
 						class:original-size={$imageFitMode === 'original'}
