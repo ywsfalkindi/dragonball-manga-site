@@ -5,24 +5,9 @@ import type { Actions, PageServerLoad } from './$types';
 import { grantXp } from '../../../../hooks.server';
 import DOMPurify from 'dompurify';
 import { JSDOM } from 'jsdom';
-import type { RecordModel } from 'pocketbase';
 
 const window = new JSDOM('').window;
 const purify = DOMPurify(window);
-
-const processComments = (comments: RecordModel[]) => {
-	// <-- ✨ أضفنا النوع هنا
-	comments.forEach((c: RecordModel) => {
-		// <-- ✨ وأضفنا النوع هنا
-		if (c.expand?.user && c.expand.user.avatar) {
-			// إذا كان للمستخدم صورة رمزية، قم بإنشاء رابط كامل لها
-			c.expand.user.avatarUrl = pb.files.getURL(c.expand.user, c.expand.user.avatar, {
-				thumb: '100x100'
-			});
-		}
-	});
-	return comments;
-};
 
 export const load: PageServerLoad = async ({ locals, params, url }) => {
 	try {
@@ -58,35 +43,68 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 			lastPageRead = pageFromUrl;
 		}
 
-		let topLevelComments = await pb.collection('comments').getFullList({
-			filter: `chapter = "${chapter.id}" && parentComment = null`,
+		// --- بداية التعديل ---
+
+		// 1. جلب كل التعليقات والردود دفعة واحدة
+		const allCommentsRaw = await pb.collection('comments').getFullList({
+			filter: `chapter = "${chapter.id}"`,
 			sort: '-created',
 			expand: 'user,likes'
 		});
 
-		let replies = await pb.collection('comments').getFullList({
-			filter: `chapter = "${chapter.id}" && parentComment != null`,
-			sort: '+created',
-			expand: 'user,likes'
+		// 2. تحويل سجلات PocketBase إلى كائنات JavaScript بسيطة ونظيفة
+		const allComments = allCommentsRaw.map((c) => {
+			// تشكيل كائن المستخدم بشكل آمن
+			const userObject = c.expand?.user
+				? {
+						id: c.expand.user.id,
+						username: c.expand.user.username,
+						name: c.expand.user.name,
+						avatarUrl: c.expand.user.avatar
+							? pb.files.getURL(c.expand.user, c.expand.user.avatar, { thumb: '100x100' })
+							: null
+					}
+				: null;
+
+			// تشكيل الكائن النهائي للتعليق
+			return {
+				id: c.id,
+				content: c.content,
+				created: c.created,
+				parentComment: c.parentComment || null,
+				likes: c.expand?.likes?.map((like: any) => like.id) || [],
+				user: userObject,
+				replies: [] as any[] // سيتم ملؤه لاحقًا
+			};
 		});
 
-		// معالجة التعليقات والردود لإنشاء روابط الصور
-		topLevelComments = processComments(topLevelComments);
-		replies = processComments(replies);
-
+		// 3. بناء هيكل الشجرة للتعليقات والردود
 		const commentsById = new Map();
-		topLevelComments.forEach((c) => {
-			c.replies = [];
+		const topLevelComments: any[] = [];
+
+		allComments.forEach((c) => {
 			commentsById.set(c.id, c);
 		});
-		replies.forEach((r) => {
-			const parent = commentsById.get(r.parentComment);
-			if (parent) {
-				parent.replies.push(r);
+
+		allComments.forEach((c) => {
+			if (c.parentComment && commentsById.has(c.parentComment)) {
+				commentsById.get(c.parentComment).replies.push(c);
+			} else {
+				topLevelComments.push(c);
 			}
 		});
 
-		const comments = topLevelComments;
+		// 4. فرز الردود داخل كل تعليق حسب تاريخ الإنشاء (الأقدم أولاً)
+		topLevelComments.forEach((c) => {
+			if (c.replies.length > 0) {
+				c.replies.sort(
+					(a: { created: string | number | Date }, b: { created: string | number | Date }) =>
+						new Date(a.created).getTime() - new Date(b.created).getTime()
+				);
+			}
+		});
+
+		// --- نهاية التعديل ---
 
 		const [pages, nextChapter] = await Promise.all([
 			pb.collection('pages').getFullList({
@@ -110,7 +128,7 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 			manga,
 			chapter,
 			pages,
-			comments,
+			comments: topLevelComments, // استخدام المتغير الجديد
 			nextChapterExists: !!nextChapter,
 			lastPageRead
 		};
@@ -141,7 +159,6 @@ export const actions: Actions = {
 			.getFirstListItem(`manga.id = "${manga.id}" && chapter_number = ${params.chapter_number}`);
 
 		try {
-			// 1. تجهيز بيانات التعليق
 			const recordData = {
 				content,
 				user: locals.user.id,
@@ -149,29 +166,36 @@ export const actions: Actions = {
 				parentComment: parentId || null
 			};
 
-			// 2. إنشاء التعليق مرة واحدة فقط
 			const createdRecord = await pb.collection('comments').create(recordData);
 
-			// 3. طلب السجل مرة أخرى مع تضمين بيانات المستخدم
-			const newComment = await pb.collection('comments').getOne(createdRecord.id, {
+			const newCommentRaw = await pb.collection('comments').getOne(createdRecord.id, {
 				expand: 'user'
 			});
 
-			// 4. معالجة التعليق لإنشاء رابط الصورة الرمزية
-			if (newComment.expand?.user && newComment.expand.user.avatar) {
-				newComment.expand.user.avatarUrl = pb.files.getURL(
-					newComment.expand.user,
-					newComment.expand.user.avatar,
-					{
-						thumb: '100x100'
-					}
-				);
-			}
+			// تحويل السجل الجديد إلى كائن بسيط قبل إرساله
+			const newComment = {
+				id: newCommentRaw.id,
+				content: newCommentRaw.content,
+				created: newCommentRaw.created,
+				parentComment: newCommentRaw.parentComment || null,
+				likes: [],
+				user: newCommentRaw.expand?.user
+					? {
+							id: newCommentRaw.expand.user.id,
+							username: newCommentRaw.expand.user.username,
+							name: newCommentRaw.expand.user.name,
+							avatarUrl: newCommentRaw.expand.user.avatar
+								? pb.files.getURL(newCommentRaw.expand.user, newCommentRaw.expand.user.avatar, {
+										thumb: '100x100'
+									})
+								: null
+						}
+					: null,
+				replies: []
+			};
 
-			// 5. منح نقاط الخبرة
 			await grantXp(locals.user.id, 10);
 
-			// 6. إعادة التعليق الجديد والكامل إلى الواجهة الأمامية
 			return { success: true, newComment };
 		} catch (err) {
 			console.error('Add comment error:', err);
@@ -188,23 +212,19 @@ export const actions: Actions = {
 		const commentId = data.get('commentId') as string;
 
 		try {
-			// PocketBase يستخدم `+=` و `-=` لتعديل العلاقات المتعددة
 			await pb.collection('comments').update(commentId, {
 				'likes+': locals.user.id
 			});
 
 			try {
 				const comment = await pb.collection('comments').getOne(commentId, { fields: 'user' });
-				// نتأكد أن المستخدم لا يعجب بتعليقه الخاص
 				if (comment.user !== locals.user.id) {
-					await grantXp(comment.user, 5); // منح 5 XP لصاحب التعليق
+					await grantXp(comment.user, 5);
 				}
 			} catch (xpError) {
-				// تجاهل الخطأ في حال فشل منح XP حتى لا يؤثر على الإعجاب
 				console.error('Failed to grant XP for like:', xpError);
 			}
 		} catch (err) {
-			// إذا كان المستخدم قد أعجب به بالفعل، سيحدث خطأ، لذا سنقوم بإزالة الإعجاب
 			try {
 				await pb.collection('comments').update(commentId, {
 					'likes-': locals.user.id

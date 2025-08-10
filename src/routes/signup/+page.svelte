@@ -60,7 +60,7 @@
 	<title>إنشاء حساب جديد</title>
 </svelte:head>
 
-<div class="flex min-h-screen items-center justify-center bg-gray-900 font-[Tajawal]">
+<div class="flex min-h-screen items-center justify-center bg-gray-900 font-[Tajawal]" dir="rtl">
 	<div class="w-full max-w-md rounded-lg bg-gray-800 p-8 shadow-xl">
 		<h1 class="mb-6 text-center text-3xl font-bold text-white">إنشاء حساب جديد</h1>
 		<form method="POST">

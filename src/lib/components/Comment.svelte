@@ -10,10 +10,10 @@
 
 <article class="flex space-x-4 rtl:space-x-reverse">
 	<div class="flex-shrink-0">
-		{#if comment.expand?.user?.avatarUrl}
+		{#if comment.user?.avatarUrl}
 			<img
-				src={comment.expand.user.avatarUrl}
-				alt="الصورة الرمزية لـ {comment.expand.user.username}"
+				src={comment.user.avatarUrl}
+				alt="الصورة الرمزية لـ {comment.user.username}"
 				class="h-12 w-12 rounded-full border-2 border-gray-700 object-cover"
 			/>
 		{:else}
@@ -31,7 +31,7 @@
 
 	<div class="flex-grow">
 		<div class="rounded-lg bg-gray-800 p-4">
-			<p class="font-bold text-orange-400">{comment.expand?.user?.username || 'مستخدم محذوف'}</p>
+			<p class="font-bold text-orange-400">{comment.user?.username || 'مستخدم محذوف'}</p>
 			<div class="prose prose-invert mt-2 text-gray-300">
 				{@html comment.content}
 			</div>
@@ -41,7 +41,7 @@
 				<input type="hidden" name="commentId" value={comment.id} />
 				<button type="submit" class="flex items-center gap-1 hover:text-white">
 					<span>{comment.expand?.likes?.length || 0}</span>
-					<span class={comment.expand?.likes?.includes(user?.id) ? 'text-red-500' : ''}>❤️</span>
+					<span class={comment.likes?.includes(user?.id) ? 'text-red-500' : ''}>❤️</span>
 				</button>
 			</form>
 

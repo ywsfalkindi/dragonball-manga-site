@@ -12,7 +12,7 @@
 	<title>تسجيل الدخول</title>
 </svelte:head>
 
-<div class="flex min-h-screen items-center justify-center bg-gray-900 font-[Tajawal]">
+<div class="flex min-h-screen items-center justify-center bg-gray-900 font-[Tajawal]" dir="rtl">
 	<div class="w-full max-w-md rounded-lg bg-gray-800 p-8 shadow-xl">
 		<h1 class="mb-6 text-center text-3xl font-bold text-white">تسجيل الدخول</h1>
 
@@ -56,7 +56,7 @@
 			</button>
 		</form>
 		<p class="mt-4 text-center text-gray-400">
-			ليس لديك حساب؟ <a href="/signup" class="text-orange-500 hover:underline">أنشئ حسابًا جديدًا</a
+			ليس لديك حساب؟ <a href="/signup" class="text-orange-500 hover:underline">أنشئ حساباً جديداً</a
 			>
 		</p>
 	</div>
