@@ -20,7 +20,6 @@ async function getAnnouncement() {
 	}
 }
 
-
 export const load: PageServerLoad = async () => {
 	const [settings, announcement] = await Promise.all([getSettings(), getAnnouncement()]);
 	return { settings, announcement };

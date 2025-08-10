@@ -9,19 +9,19 @@
 	<title>إدارة المانجا</title>
 </svelte:head>
 
-<div class="p-8 font-[Tajawal] bg-gray-900 min-h-screen text-white">
-	<a href="/admin" class="text-blue-400 hover:underline mb-8 block text-right">
+<div class="min-h-screen bg-gray-900 p-8 font-[Tajawal] text-white">
+	<a href="/admin" class="mb-8 block text-right text-blue-400 hover:underline">
 		&larr; العودة إلى لوحة التحكم
 	</a>
 
-	<div class="flex flex-row-reverse justify-between items-center mb-8">
+	<div class="mb-8 flex flex-row-reverse items-center justify-between">
 		<h1 class="text-4xl font-bold">إدارة المانجا</h1>
-		<a href="/admin/mangas/new" class="bg-green-600 py-2 px-6 rounded hover:bg-green-700">
+		<a href="/admin/mangas/new" class="rounded bg-green-600 px-6 py-2 hover:bg-green-700">
 			إضافة مانجا جديدة
 		</a>
 	</div>
 
-	<div class="bg-gray-800 rounded-lg shadow-lg overflow-x-auto">
+	<div class="overflow-x-auto rounded-lg bg-gray-800 shadow-lg">
 		<table class="w-full text-right">
 			<thead class="bg-gray-700">
 				<tr>
@@ -37,7 +37,7 @@
 						<td class="p-4 font-semibold">{manga.title}</td>
 						<td class="p-4 text-gray-400" dir="ltr">{manga.slug}</td>
 						<td class="p-4 text-gray-400">{manga.status}</td>
-						<td class="p-4 flex gap-2 justify-end">
+						<td class="flex justify-end gap-2 p-4">
 							<a href="/admin/mangas/{manga.id}" class="text-blue-400 hover:underline">تعديل</a>
 							<form
 								method="POST"

@@ -9,13 +9,11 @@ export const load: PageServerLoad = async ({ params }) => {
 
 		// جلب بيانات مرتبطة بالمستخدم
 		const [favorites, readHistory, comments, userDragonBalls] = await Promise.all([
-			pb
-				.collection('favorites')
-				.getFullList({
-					filter: `user.id = "${params.userId}"`,
-					expand: 'manga',
-					sort: '-created'
-				}),
+			pb.collection('favorites').getFullList({
+				filter: `user.id = "${params.userId}"`,
+				expand: 'manga',
+				sort: '-created'
+			}),
 			pb.collection('read_history').getList(1, 10, {
 				filter: `user.id = "${params.userId}"`,
 				sort: '-created',
@@ -27,7 +25,10 @@ export const load: PageServerLoad = async ({ params }) => {
 				sort: '-created',
 				expand: 'chapter'
 			}),
-			pb.collection('user_dragonballs').getFirstListItem(`user.id = "${params.userId}"`).catch(() => null)
+			pb
+				.collection('user_dragonballs')
+				.getFirstListItem(`user.id = "${params.userId}"`)
+				.catch(() => null)
 		]);
 
 		return {

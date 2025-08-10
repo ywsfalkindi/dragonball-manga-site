@@ -37,8 +37,9 @@ export const actions: Actions = {
 		} catch (err: any) {
 			// --- التحسين رقم 2: معالجة أخطاء آمنة ومبسطة ---
 			console.error('**POCKETBASE ERROR:**', JSON.stringify(err, null, 2));
-			return fail(400, { 
-				error: 'فشل إنشاء السجل في قاعدة البيانات. تحقق من أن الـ Slug فريد وأن جميع الحقول المطلوبة صحيحة.' 
+			return fail(400, {
+				error:
+					'فشل إنشاء السجل في قاعدة البيانات. تحقق من أن الـ Slug فريد وأن جميع الحقول المطلوبة صحيحة.'
 			});
 		}
 	}

@@ -61,12 +61,14 @@
 	<title>تحدي: {data.quiz.title}</title>
 </svelte:head>
 
-<div class="min-h-screen flex items-center justify-center p-4 font-[Tajawal] bg-gray-900 text-white">
-	<div class="w-full max-w-2xl bg-gray-800 rounded-2xl shadow-2xl p-8 transform transition-all">
+<div
+	class="flex min-h-screen items-center justify-center bg-gray-900 p-4 font-[Tajawal] text-white"
+>
+	<div class="w-full max-w-2xl transform rounded-2xl bg-gray-800 p-8 shadow-2xl transition-all">
 		{#if $quizStore.isCompleted}
 			<div class="text-center">
-				<h2 class="text-3xl font-bold text-green-400 mb-4">أكملت التحدي!</h2>
-				<p class="text-gray-300 mb-8">أنت على وشك معرفة نتيجتك. هل أنت مستعد؟</p>
+				<h2 class="mb-4 text-3xl font-bold text-green-400">أكملت التحدي!</h2>
+				<p class="mb-8 text-gray-300">أنت على وشك معرفة نتيجتك. هل أنت مستعد؟</p>
 				<form
 					id="submitQuizForm"
 					method="POST"
@@ -80,22 +82,26 @@
 					}}
 				>
 					<input type="hidden" name="answers" value={JSON.stringify($quizStore.userAnswers)} />
-					<input type="hidden" name="time_taken" value={Math.floor((Date.now() - startTime) / 1000)} />
+					<input
+						type="hidden"
+						name="time_taken"
+						value={Math.floor((Date.now() - startTime) / 1000)}
+					/>
 					<button
 						type="submit"
-						class="w-full bg-orange-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-orange-700 transition-transform hover:scale-105"
+						class="w-full rounded-lg bg-orange-600 px-6 py-3 font-bold text-white transition-transform hover:scale-105 hover:bg-orange-700"
 					>
 						عرض نتيجتي الآن!
 					</button>
 				</form>
 				{#if form?.error}
-					<p class="text-red-500 mt-4">{form.error}</p>
+					<p class="mt-4 text-red-500">{form.error}</p>
 				{/if}
 			</div>
 		{:else if currentQuestion}
 			<div>
 				<div class="mb-6">
-					<div class="flex justify-between items-center text-sm text-gray-400 mb-2">
+					<div class="mb-2 flex items-center justify-between text-sm text-gray-400">
 						{#if timeLeft !== null}
 							<span class="font-mono text-lg text-red-400">{formatTime(timeLeft)}</span>
 						{:else}
@@ -106,9 +112,9 @@
 							السؤال {$quizStore.currentQuestionIndex + 1} / {$quizStore.questions.length}
 						</p>
 					</div>
-					<div class="w-full bg-gray-700 rounded-full h-2.5" dir="rtl">
+					<div class="h-2.5 w-full rounded-full bg-gray-700" dir="rtl">
 						<!-- svelte-ignore element_invalid_self_closing_tag -->
-						<div class="bg-orange-500 h-2.5 rounded-full" style="width: {progress}%" />
+						<div class="h-2.5 rounded-full bg-orange-500" style="width: {progress}%" />
 					</div>
 				</div>
 
@@ -122,31 +128,31 @@
 					</div>
 				{/if}
 
-				<h2 class="text-2xl md:text-3xl font-bold text-center mb-8" dir="rtl">
+				<h2 class="mb-8 text-center text-2xl font-bold md:text-3xl" dir="rtl">
 					{currentQuestion.text}
 				</h2>
 
 				{#if currentQuestion.type === 'true_false'}
-					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
 						<button
 							on:click={() => handleAnswer(1)}
-							class="p-4 bg-gray-700 rounded-lg text-lg text-center hover:bg-green-500 hover:text-white transition-colors duration-200"
+							class="rounded-lg bg-gray-700 p-4 text-center text-lg transition-colors duration-200 hover:bg-green-500 hover:text-white"
 						>
 							{currentQuestion.option_1}
 						</button>
 						<button
 							on:click={() => handleAnswer(2)}
-							class="p-4 bg-gray-700 rounded-lg text-lg text-center hover:bg-red-500 hover:text-white transition-colors duration-200"
+							class="rounded-lg bg-gray-700 p-4 text-center text-lg transition-colors duration-200 hover:bg-red-500 hover:text-white"
 						>
 							{currentQuestion.option_2}
 						</button>
 					</div>
 				{:else}
-					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
 						{#each [currentQuestion.option_1, currentQuestion.option_2, currentQuestion.option_3, currentQuestion.option_4] as option, i}
 							<button
 								on:click={() => handleAnswer(i + 1)}
-								class="p-4 bg-gray-700 rounded-lg text-lg text-center hover:bg-orange-500 hover:text-white transition-colors duration-200"
+								class="rounded-lg bg-gray-700 p-4 text-center text-lg transition-colors duration-200 hover:bg-orange-500 hover:text-white"
 							>
 								{option}
 							</button>

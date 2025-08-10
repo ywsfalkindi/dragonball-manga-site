@@ -6,6 +6,7 @@
 
 	const { manga, isFavorited, chaptersResult, readChapterIds, lastReadChapter, user } = data;
 	const chapters = chaptersResult.items || [];
+	const latestChapter = chapters.length > 0 ? chapters[chapters.length - 1] : null;
 
 	let showToast = false;
 	let toastMessage = '';
@@ -15,7 +16,7 @@
 	<div
 		in:fly={{ y: -20, duration: 300 }}
 		out:fly={{ y: -20, duration: 300 }}
-		class="fixed top-20 right-1/2 translate-x-1/2 z-[9999] bg-green-600 text-white py-2 px-6 rounded-lg shadow-lg"
+		class="fixed top-20 right-1/2 z-[9999] translate-x-1/2 rounded-lg bg-green-600 px-6 py-2 text-white shadow-lg"
 	>
 		{toastMessage}
 	</div>
@@ -25,86 +26,114 @@
 	<title>قراءة مانجا {manga.title} - جميع الفصول</title>
 </svelte:head>
 
-<div class="min-h-screen bg-gray-900 text-white font-[Tajawal]">
+<div class="min-h-screen bg-gray-900 font-[Tajawal] text-white">
 	<header
-		class="relative h-[60vh] flex items-end p-8 bg-cover bg-center bg-fixed"
+		class="relative flex h-[60vh] items-end bg-cover bg-fixed bg-center p-8"
 		style="background-image: url({manga.cover_image_url})"
 	>
 		<!-- svelte-ignore element_invalid_self_closing_tag -->
 		<div class="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/80 to-transparent" />
 		<div class="relative z-10">
 			<h1 class="text-5xl font-extrabold">{manga.title}</h1>
-			<p class="mt-4 text-lg max-w-2xl text-gray-300">{manga.description}</p>
+			<p class="mt-4 max-w-2xl text-lg text-gray-300">{manga.description}</p>
 
 			{#if user}
-				<div class="mt-6 flex items-center space-x-4 flex-wrap gap-y-4">
-					<form
-						method="POST"
-						action="?/{isFavorited ? 'unfavorite' : 'favorite'}"
-						use:enhance={() => {
-							// This code runs just before the form is submitted.
-							// We set the message that will be displayed in the toast.
-							toastMessage = isFavorited ?
-'تمت الإزالة من المفضلة بنجاح' : 'تمت الإضافة إلى المفضلة بنجاح';
-							return async ({ update }) => {
-								// This code runs after the server action is complete.
-								// SvelteKit automatically updates the `data` prop, so `isFavorited` changes.
-								// We just need to show the toast.
-								showToast = true;
-								// Hide the toast after 3 seconds.
-								setTimeout(() => {
-									showToast = false;
-								}, 3000);
-							};
-						}}
-					>
-						<button
-							type="submit"
-							class="bg-orange-600 text-white font-bold py-2 px-6 rounded-lg transition-colors hover:bg-orange-500 flex items-center gap-2"
-						>
-							<span>{isFavorited ? '❤️' : '🤍'}</span>
-							<span>{isFavorited ?
-'إزالة من المفضلة' : 'إضافة إلى المفضلة'}</span>
-						</button>
-					</form>
+				<div
+					class="mt-6 flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:gap-4"
+					dir="rtl"
+				>
 					{#if lastReadChapter}
 						<a
 							href="/manga/{manga.slug}/{lastReadChapter.chapter_number}?page={lastReadChapter.last_page_read}"
-							class="inline-block bg-green-600 text-white font-bold py-2 px-6 rounded-lg transition-colors hover:bg-green-500"
+							class="inline-block w-full rounded-lg bg-green-600 px-6 py-3 text-center font-bold text-white shadow-md transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:scale-105 hover:shadow-lg focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-gray-900 focus:outline-none sm:w-auto"
 						>
 							🚀 أكمل القراءة (الفصل {lastReadChapter.chapter_number})
 						</a>
+					{:else}
+						<a
+							href="/manga/{manga.slug}/1"
+							class="inline-block w-full rounded-lg bg-green-600 px-6 py-3 text-center font-bold text-white shadow-md transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:scale-105 hover:shadow-lg focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-gray-900 focus:outline-none sm:w-auto"
+						>
+							📖 ابدأ القراءة (الفصل 1)
+						</a>
 					{/if}
+
+					<div class="flex w-full flex-row-reverse gap-3 sm:w-auto">
+						<form
+							class="flex-grow"
+							method="POST"
+							action="?/{isFavorited ? 'unfavorite' : 'favorite'}"
+							use:enhance={() => {
+								toastMessage = isFavorited
+									? 'تمت الإزالة من المفضلة بنجاح'
+									: 'تمت الإضافة إلى المفضلة بنجاح';
+								return async ({ update }) => {
+									showToast = true;
+									setTimeout(() => {
+										showToast = false;
+									}, 3000);
+								};
+							}}
+						>
+							<button
+								type="submit"
+								class="flex w-full items-center justify-center gap-2 rounded-lg px-6 py-3 font-bold whitespace-nowrap text-white shadow-md transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:scale-105 hover:shadow-lg focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:outline-none {isFavorited
+									? 'bg-red-600 hover:bg-red-700 focus:ring-red-500'
+									: 'bg-orange-600 hover:bg-orange-700 focus:ring-orange-500'}"
+							>
+								<span>{isFavorited ? '❤️' : '🤍'}</span>
+								<span>{isFavorited ? 'إزالة من المفضلة' : 'إضافة إلى المفضلة'}</span>
+							</button>
+						</form>
+
+						{#if latestChapter}
+							<a
+								href="/manga/{manga.slug}/{latestChapter.chapter_number}"
+								aria-label="الانتقال إلى آخر فصل"
+								class="flex flex-grow items-center justify-center gap-2 rounded-lg bg-indigo-600 px-6 py-3 font-bold whitespace-nowrap text-white shadow-md transition-all duration-300 ease-in-out hover:-translate-y-0.5 hover:scale-105 hover:bg-indigo-700 hover:shadow-lg focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-900 focus:outline-none"
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									width="20"
+									height="20"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2.5"
+									stroke-linecap="round"
+									stroke-linejoin="round"><path d="m13 17 5-5-5-5" /><path d="m6 17 5-5-5-5" /></svg
+								>
+								<span>آخر فصل</span>
+							</a>
+						{/if}
+					</div>
 				</div>
 			{/if}
 		</div>
 	</header>
 
 	<main class="container mx-auto px-4 py-12" dir="rtl">
-		<h2 class="text-3xl font-bold mb-6 text-orange-500">قائمة الفصول</h2>
-		<div class="bg-gray-800 rounded-lg shadow-lg">
+		<h2 class="mb-6 text-3xl font-bold text-orange-500">قائمة الفصول</h2>
+		<div class="rounded-lg bg-gray-800 shadow-lg">
 			<ul class="divide-y divide-gray-700">
 				{#each chapters as chapter (chapter.id)}
-					<li class={lastReadChapter?.id === chapter.id ?
-'bg-blue-900/30' : ''}>
+					<li class={lastReadChapter?.id === chapter.id ? 'bg-blue-900/30' : ''}>
 						<a
 							href="/manga/{manga.slug}/{chapter.chapter_number}"
-							class="p-4 hover:bg-gray-700/50 transition-colors duration-200 flex items-center justify-between"
+							class="flex items-center justify-between p-4 transition-colors duration-200 hover:bg-gray-700/50"
 						>
-							<div class="flex items-center space-x-3 rtl:space-x-reverse gap-x-2">
+							<div class="flex items-center gap-x-2 space-x-3 rtl:space-x-reverse">
 								<span class="text-xl font-semibold">الفصل {chapter.chapter_number}</span>
 								{#if readChapterIds.has(chapter.id)}
-									<span class="text-xs bg-blue-500 text-white py-1 px-2 rounded-full">مقروء</span
-									>
+									<span class="rounded-full bg-blue-500 px-2 py-1 text-xs text-white">مقروء</span>
 								{/if}
 								{#if lastReadChapter?.id === chapter.id}
-									<span class="text-xs bg-green-500 text-white py-1 px-2 rounded-full"
+									<span class="rounded-full bg-green-500 px-2 py-1 text-xs text-white"
 										>آخر قراءة</span
 									>
 								{/if}
 							</div>
-							<span
-								class="bg-orange-500 text-white text-sm font-bold py-1 px-3 rounded-full"
+							<span class="rounded-full bg-orange-500 px-3 py-1 text-sm font-bold text-white"
 								>اقرأ الآن</span
 							>
 						</a>
@@ -113,12 +142,11 @@
 					<li class="p-6 text-center text-gray-400">لم تتم إضافة أي فصول لهذه المانجا بعد.</li>
 				{/each}
 			</ul>
-			<div class="flex justify-center items-center space-x-4 mt-8 pb-6 text-white">
+			<div class="mt-8 flex items-center justify-center space-x-4 pb-6 text-white">
 				<a
 					href="?page={chaptersResult.page - 1}"
-					class="py-2 px-4 bg-gray-700 rounded {chaptersResult.page === 1
-						?
-'opacity-50 pointer-events-none'
+					class="rounded bg-gray-700 px-4 py-2 {chaptersResult.page === 1
+						? 'pointer-events-none opacity-50'
 						: 'hover:bg-orange-600'}"
 				>
 					&laquo; السابق
@@ -126,9 +154,8 @@
 				<span> صفحة {chaptersResult.page} من {chaptersResult.totalPages} </span>
 				<a
 					href="?page={chaptersResult.page + 1}"
-					class="py-2 px-4 bg-gray-700 rounded {chaptersResult.page ===
-					chaptersResult.totalPages
-						? 'opacity-50 pointer-events-none'
+					class="rounded bg-gray-700 px-4 py-2 {chaptersResult.page === chaptersResult.totalPages
+						? 'pointer-events-none opacity-50'
 						: 'hover:bg-orange-600'}"
 				>
 					التالي &raquo;

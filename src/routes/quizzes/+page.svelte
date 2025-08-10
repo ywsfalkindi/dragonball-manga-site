@@ -12,29 +12,33 @@
 
 <div class="p-8 font-[Tajawal]">
 	<div class="container mx-auto" dir="rtl">
-		<h1 class="text-4xl font-bold mb-8 text-center text-orange-400">ساحة اختبارات Z</h1>
-		<p class="text-lg text-gray-300 text-center mb-12 max-w-2xl mx-auto">
+		<h1 class="mb-8 text-center text-4xl font-bold text-orange-400">ساحة اختبارات Z</h1>
+		<p class="mx-auto mb-12 max-w-2xl text-center text-lg text-gray-300">
 			هل تعتقد أنك تعرف كل شيء عن عالم دراغون بول ؟ اختبر معلوماتك وأثبت أنك من نخبة المحاربين !
 		</p>
 
 		<form
 			method="GET"
-			class="flex flex-wrap justify-center items-center gap-4 mb-12 p-4 bg-gray-800 rounded-lg"
+			class="mb-12 flex flex-wrap items-center justify-center gap-4 rounded-lg bg-gray-800 p-4"
 		>
 			<div class="flex-grow md:flex-grow-0">
 				<label for="category" class="sr-only">التصنيف</label>
 				<select
 					name="category"
 					id="category"
-					class="w-full appearance-none bg-gray-700 text-white px-4 py-2 rounded-lg pr-8 focus:outline-none focus:ring-2 focus:ring-orange-500"
+					class="w-full appearance-none rounded-lg bg-gray-700 px-4 py-2 pr-8 text-white focus:ring-2 focus:ring-orange-500 focus:outline-none"
 				>
 					<option value="" selected={currentCategory === ''}>كل التصنيفات</option>
 					<option value="شخصيات" selected={currentCategory === 'شخصيات'}>شخصيات</option>
 					<option value="أحداث" selected={currentCategory === 'أحداث'}>أحداث</option>
 					<option value="تقنيات" selected={currentCategory === 'تقنيات'}>تقنيات</option>
 					<option value="دراغون بول" selected={currentCategory === 'دراغون بول'}>دراغون بول</option>
-					<option value="دراغون بول Z" selected={currentCategory === 'دراغون بول Z'}>دراغون بول Z</option>
-					<option value="دراغون بول Super" selected={currentCategory === 'دراغون بول Super'}>دراغون بول Super</option>
+					<option value="دراغون بول Z" selected={currentCategory === 'دراغون بول Z'}
+						>دراغون بول Z</option
+					>
+					<option value="دراغون بول Super" selected={currentCategory === 'دراغون بول Super'}
+						>دراغون بول Super</option
+					>
 				</select>
 			</div>
 			<div class="flex-grow md:flex-grow-0">
@@ -42,7 +46,7 @@
 				<select
 					name="difficulty"
 					id="difficulty"
-					class="w-full appearance-none bg-gray-700 text-white px-4 py-2 rounded-lg pr-8 focus:outline-none focus:ring-2 focus:ring-orange-500"
+					class="w-full appearance-none rounded-lg bg-gray-700 px-4 py-2 pr-8 text-white focus:ring-2 focus:ring-orange-500 focus:outline-none"
 				>
 					<option value="" selected={currentDifficulty === ''}>كل المستويات</option>
 					<option value="سهل" selected={currentDifficulty === 'سهل'}>سهل</option>
@@ -53,51 +57,53 @@
 			</div>
 			<button
 				type="submit"
-				class="w-full md:w-auto bg-orange-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-orange-700 transition-colors"
+				class="w-full rounded-lg bg-orange-600 px-6 py-2 font-bold text-white transition-colors hover:bg-orange-700 md:w-auto"
 			>
 				تصفية
 			</button>
 		</form>
 
 		{#if quizzes.length > 0}
-			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+			<div class="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
 				{#each quizzes as quiz (quiz.id)}
 					<a
 						href="/quizzes/{quiz.slug}"
-						class="bg-gray-800 rounded-lg shadow-lg overflow-hidden group transform hover:-translate-y-2 transition-transform duration-300"
+						class="group transform overflow-hidden rounded-lg bg-gray-800 shadow-lg transition-transform duration-300 hover:-translate-y-2"
 					>
 						<div class="manga-card-image-container relative">
 							<img
 								src={quiz.cover_image_url || '/placeholder.png'}
 								alt={quiz.title}
-								class="w-full h-full object-cover"
+								class="h-full w-full object-cover"
 							/>
 							<!-- svelte-ignore element_invalid_self_closing_tag -->
-							<div
-								class="absolute inset-0 bg-black/30 group-hover:bg-black/50 transition-colors"
-							/>
+							<div class="absolute inset-0 bg-black/30 transition-colors group-hover:bg-black/50" />
 							<div class="absolute top-2 right-2 flex gap-2">
-								<span class="px-2 py-1 text-xs rounded-full bg-blue-500/80 text-white backdrop-blur-sm"
+								<span
+									class="rounded-full bg-blue-500/80 px-2 py-1 text-xs text-white backdrop-blur-sm"
 									>{quiz.difficulty}</span
 								>
-								<span class="px-2 py-1 text-xs rounded-full bg-purple-500/80 text-white backdrop-blur-sm"
+								<span
+									class="rounded-full bg-purple-500/80 px-2 py-1 text-xs text-white backdrop-blur-sm"
 									>{quiz.category}</span
 								>
 							</div>
 						</div>
 						<div class="p-6 text-right">
-							<h2 class="text-2xl font-bold text-white group-hover:text-orange-400 transition-colors">
+							<h2
+								class="text-2xl font-bold text-white transition-colors group-hover:text-orange-400"
+							>
 								{quiz.title}
 							</h2>
-							<p class="text-gray-400 mt-2 line-clamp-2">{quiz.description}</p>
+							<p class="mt-2 line-clamp-2 text-gray-400">{quiz.description}</p>
 						</div>
 					</a>
 				{/each}
 			</div>
 		{:else}
-			<div class="text-center py-16 bg-gray-800 rounded-lg">
+			<div class="rounded-lg bg-gray-800 py-16 text-center">
 				<p class="text-2xl text-gray-400">لا توجد اختبارات تطابق خياراتك الحالية.</p>
-				<p class="text-gray-500 mt-2">حاول تغيير فلاتر البحث أو عد قريبًا!</p>
+				<p class="mt-2 text-gray-500">حاول تغيير فلاتر البحث أو عد قريبًا!</p>
 			</div>
 		{/if}
 	</div>

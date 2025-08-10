@@ -11,39 +11,39 @@
 	>
 </svelte:head>
 
-<div class="p-8 font-[Tajawal] bg-gray-900 min-h-screen text-white">
+<div class="min-h-screen bg-gray-900 p-8 font-[Tajawal] text-white">
 	<a
 		href="/admin/mangas/{data.chapter.expand?.manga.id}"
-		class="text-blue-400 hover:underline mb-8 block text-right"
+		class="mb-8 block text-right text-blue-400 hover:underline"
 	>
 		&larr; العودة إلى تعديل المانجا
 	</a>
-	<h1 class="text-4xl font-bold mb-2 text-right">
+	<h1 class="mb-2 text-right text-4xl font-bold">
 		إدارة صفحات: {data.chapter.expand?.manga.title}
 	</h1>
-	<p class="text-xl text-orange-400 mb-8 text-right">الفصل #{data.chapter.chapter_number}</p>
+	<p class="mb-8 text-right text-xl text-orange-400">الفصل #{data.chapter.chapter_number}</p>
 
-	<div class="bg-gray-800 p-6 rounded-lg shadow-lg">
-		<h2 class="text-2xl font-bold mb-6 text-right">
+	<div class="rounded-lg bg-gray-800 p-6 shadow-lg">
+		<h2 class="mb-6 text-right text-2xl font-bold">
 			قائمة الصفحات ({data.pages.length} صفحة)
 		</h2>
 
 		{#if data.pages.length > 0}
-			<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+			<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
 				{#each data.pages as page (page.id)}
-					<div class="relative group border-2 border-gray-700 rounded-lg overflow-hidden">
+					<div class="group relative overflow-hidden rounded-lg border-2 border-gray-700">
 						<img
 							src={page.imageUrl}
 							alt="صفحة رقم {page.page_number}"
-							class="w-full h-auto aspect-[2/3] object-cover"
+							class="aspect-[2/3] h-auto w-full object-cover"
 						/>
 						<div
-							class="absolute bottom-0 left-0 right-0 bg-black/70 p-2 text-center text-sm font-semibold"
+							class="absolute right-0 bottom-0 left-0 bg-black/70 p-2 text-center text-sm font-semibold"
 						>
 							صفحة {page.page_number}
 						</div>
 						<div
-							class="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+							class="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 transition-opacity group-hover:opacity-100"
 						>
 							<form
 								method="POST"
@@ -63,14 +63,14 @@
 								}}
 							>
 								<input type="hidden" name="pageId" value={page.id} />
-								<button class="text-red-500 hover:text-red-400 font-bold">حذف</button>
+								<button class="font-bold text-red-500 hover:text-red-400">حذف</button>
 							</form>
 						</div>
 					</div>
 				{/each}
 			</div>
 		{:else}
-			<p class="text-gray-400 text-center py-8">لا توجد صفحات لعرضها في هذا الفصل.</p>
+			<p class="py-8 text-center text-gray-400">لا توجد صفحات لعرضها في هذا الفصل.</p>
 		{/if}
 	</div>
 </div>

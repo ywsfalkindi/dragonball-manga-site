@@ -27,7 +27,7 @@ export const actions: Actions = {
 		if (!quizId) return { success: false, message: 'معرّف الاختبار مفقود.' };
 
 		try {
-            // ملاحظة: يجب تفعيل "Cascade Delete" في PocketBase لحذف الأسئلة المتعلقة تلقائياً
+			// ملاحظة: يجب تفعيل "Cascade Delete" في PocketBase لحذف الأسئلة المتعلقة تلقائياً
 			await pb.collection('quizzes').delete(quizId);
 			return { success: true, message: 'تم حذف الاختبار بنجاح.' };
 		} catch (err) {

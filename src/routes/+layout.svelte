@@ -27,8 +27,9 @@
 </script>
 
 {#if $navigating}
-	<div class="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50">
-		<div class="h-16 w-16 animate-spin rounded-full border-4 border-t-orange-500 border-gray-600"
+	<div class="bg-opacity-50 fixed inset-0 z-[9999] flex items-center justify-center bg-black">
+		<div
+			class="h-16 w-16 animate-spin rounded-full border-4 border-gray-600 border-t-orange-500"
 		></div>
 	</div>
 {/if}
@@ -41,7 +42,7 @@
 	<div
 		in:fly={{ y: -20, duration: 300 }}
 		out:fly={{ y: -20, duration: 300 }}
-		class="fixed top-20 right-1/2 z-[9999] translate-x-1/2 rounded-lg bg-green-600 py-2 px-6 text-white shadow-lg"
+		class="fixed top-20 right-1/2 z-[9999] translate-x-1/2 rounded-lg bg-green-600 px-6 py-2 text-white shadow-lg"
 	>
 		تم تسجيل خروجك بنجاح!
 	</div>
@@ -69,12 +70,8 @@
 					stroke-width="2"
 					stroke-linecap="round"
 					stroke-linejoin="round"
-					><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line
-						x1="3"
-						y1="18"
-						x2="21"
-						y2="18"
-					></line></svg
+					><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"
+					></line><line x1="3" y1="18" x2="21" y2="18"></line></svg
 				>
 			</button>
 
@@ -92,20 +89,18 @@
 						<span class="hidden sm:inline">أهلاً بك، {data.user.name}</span>
 						<a
 							href="/profile"
-							class="whitespace-nowrap rounded bg-orange-600 py-2 px-4 hover:bg-orange-700"
+							class="rounded bg-orange-600 px-4 py-2 whitespace-nowrap hover:bg-orange-700"
 							>ملفي الشخصي</a
 						>
 					</div>
 				{:else}
 					<div class="flex items-center gap-x-2">
-						<a
-							href="/login"
-							class="whitespace-nowrap rounded py-2 px-4 hover:bg-gray-700"
+						<a href="/login" class="rounded px-4 py-2 whitespace-nowrap hover:bg-gray-700"
 							>تسجيل الدخول</a
 						>
 						<a
 							href="/signup"
-							class="whitespace-nowrap rounded bg-orange-600 py-2 px-4 hover:bg-orange-700"
+							class="rounded bg-orange-600 px-4 py-2 whitespace-nowrap hover:bg-orange-700"
 							>إنشاء حساب</a
 						>
 					</div>
@@ -129,7 +124,7 @@
 							<span class="text-gray-300" dir="rtl">أهلاً بك، {data.user.name}</span>
 							<a
 								href="/profile"
-								class="w-full whitespace-nowrap rounded bg-orange-600 py-2 px-4 text-center hover:bg-orange-700"
+								class="w-full rounded bg-orange-600 px-4 py-2 text-center whitespace-nowrap hover:bg-orange-700"
 								>ملفي الشخصي</a
 							>
 						</div>
@@ -137,12 +132,12 @@
 						<div class="flex w-full flex-col items-stretch gap-y-2">
 							<a
 								href="/login"
-								class="whitespace-nowrap rounded py-2 px-4 text-center hover:bg-gray-700"
+								class="rounded px-4 py-2 text-center whitespace-nowrap hover:bg-gray-700"
 								>تسجيل الدخول</a
 							>
 							<a
 								href="/signup"
-								class="whitespace-nowrap rounded bg-orange-600 py-2 px-4 text-center hover:bg-orange-700"
+								class="rounded bg-orange-600 px-4 py-2 text-center whitespace-nowrap hover:bg-orange-700"
 								>إنشاء حساب</a
 							>
 						</div>

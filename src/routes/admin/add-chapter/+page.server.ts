@@ -21,7 +21,7 @@ export const actions: Actions = {
 		}
 
 		try {
-            // ✨ التحسين: تم حذف كود تسجيل دخول المدير لأنه غير ضروري ✨
+			// ✨ التحسين: تم حذف كود تسجيل دخول المدير لأنه غير ضروري ✨
 
 			// --- بداية التحسين الأول: التحقق من وجود الفصل ---
 			try {
@@ -47,7 +47,7 @@ export const actions: Actions = {
 			const pagesToCreate = [];
 			for (let i = 1; i <= totalPages; i++) {
 				const chapterNumFormatted = String(chapterNumber).padStart(2, '0');
-				const pageNumFormatted = String(i).padStart(2, '0'); 
+				const pageNumFormatted = String(i).padStart(2, '0');
 				const imagePath = `${manga.folder_name}/chapter${chapterNumber}/${manga.file_prefix}-ch${chapterNumFormatted}-p${pageNumFormatted}.jpg`;
 
 				pagesToCreate.push({
@@ -59,7 +59,6 @@ export const actions: Actions = {
 
 			await Promise.all(pagesToCreate.map((page) => pb.collection('pages').create(page)));
 			// --- نهاية التحسين الثاني ---
-
 		} catch (err: any) {
 			return fail(500, { error: `حدث خطأ: ${err.message}` });
 		}

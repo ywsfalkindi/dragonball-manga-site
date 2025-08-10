@@ -19,17 +19,21 @@
 	<title>موقع دراغون بول الأسطوري | اقرأ المانجا أونلاين</title>
 </svelte:head>
 
-<div class="min-h-screen bg-gray-900 text-white font-[Tajawal]">
+<div class="min-h-screen bg-gray-900 font-[Tajawal] text-white">
 	<header
-		class="relative flex items-center justify-center h-96 bg-cover bg-center overflow-hidden"
+		class="relative flex h-96 items-center justify-center overflow-hidden bg-cover bg-center"
 		style="background-image: url('/covers/hero-banner.jpg');"
 	>
 		<!-- svelte-ignore element_invalid_self_closing_tag -->
-		<div class="absolute inset-0 bg-black bg-opacity-60" />
-		<div class="relative z-10 text-center px-4 flex flex-col items-center justify-center">
-			<div class="w-full h-32 flex items-center justify-center">
+		<div class="bg-opacity-60 absolute inset-0 bg-black" />
+		<div class="relative z-10 flex flex-col items-center justify-center px-4 text-center">
+			<div class="flex h-32 w-full items-center justify-center">
 				{#if stage === 1}
-					<div in:fade={{ duration: 300 }} out:fade={{ duration: 500 }} class="energy-sphere-container">
+					<div
+						in:fade={{ duration: 300 }}
+						out:fade={{ duration: 500 }}
+						class="energy-sphere-container"
+					>
 						<div class="energy-sphere"></div>
 						{#each Array(20) as _, i}
 							<div
@@ -43,13 +47,13 @@
 					<div class="text-content">
 						<h1
 							in:fly={{ y: 20, duration: 800, easing: cubicOut }}
-							class="text-4xl sm:text-5xl md:text-7xl font-extrabold tracking-tight text-shadow-lg"
+							class="text-4xl font-extrabold tracking-tight text-shadow-lg sm:text-5xl md:text-7xl"
 						>
 							عالم دراغون بول بين يديك
 						</h1>
 						<p
 							in:fly={{ y: 20, duration: 800, delay: 200, easing: cubicOut }}
-							class="mt-4 text-base sm:text-xl text-gray-200"
+							class="mt-4 text-base text-gray-200 sm:text-xl"
 						>
 							اقرأ جميع فصول المانجا من الطفولة وحتى سوبر بجودة عالية
 						</p>
@@ -60,12 +64,22 @@
 	</header>
 
 	<main class="container mx-auto px-4 py-16">
-		<h2 class="text-3xl md:text-4xl font-bold text-center mb-6 text-orange-500">اختر السلسلة</h2>
+		<h2 class="mb-6 text-center text-3xl font-bold text-orange-500 md:text-4xl">اختر السلسلة</h2>
 
-		<div class="flex flex-wrap justify-center items-center gap-4 mb-12">
-			<div class="flex items-center gap-2 p-1 bg-gray-800 rounded-lg">
-				<a href="?sort=-created&status={status || ''}" class="px-4 py-2 text-sm rounded-md transition-colors {sort === '-created' ? 'bg-orange-600' : 'hover:bg-gray-700'}">الأحدث</a>
-				<a href="?sort=title&status={status || ''}" class="px-4 py-2 text-sm rounded-md transition-colors {sort === 'title' ? 'bg-orange-600' : 'hover:bg-gray-700'}">أبجدي</a>
+		<div class="mb-12 flex flex-wrap items-center justify-center gap-4">
+			<div class="flex items-center gap-2 rounded-lg bg-gray-800 p-1">
+				<a
+					href="?sort=-created&status={status || ''}"
+					class="rounded-md px-4 py-2 text-sm transition-colors {sort === '-created'
+						? 'bg-orange-600'
+						: 'hover:bg-gray-700'}">الأحدث</a
+				>
+				<a
+					href="?sort=title&status={status || ''}"
+					class="rounded-md px-4 py-2 text-sm transition-colors {sort === 'title'
+						? 'bg-orange-600'
+						: 'hover:bg-gray-700'}">أبجدي</a
+				>
 			</div>
 			<div class="relative">
 				<select
@@ -73,41 +87,47 @@
 						const newStatus = e.currentTarget.value;
 						window.location.href = `?sort=${sort}&status=${newStatus}`;
 					}}
-					class="appearance-none bg-gray-800 text-white px-4 py-2 rounded-lg pr-8 focus:outline-none focus:ring-2 focus:ring-orange-500"
+					class="appearance-none rounded-lg bg-gray-800 px-4 py-2 pr-8 text-white focus:ring-2 focus:ring-orange-500 focus:outline-none"
 				>
 					<option value="" selected={status === ''}>كل الحالات</option>
 					<option value="ongoing" selected={status === 'ongoing'}>مستمرة</option>
 					<option value="completed" selected={status === 'completed'}>مكتملة</option>
 				</select>
-				<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
-					<svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+				<div
+					class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400"
+				>
+					<svg class="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
+						><path
+							d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"
+						/></svg
+					>
 				</div>
 			</div>
 		</div>
 
 		{#if mangas.length > 0}
-			<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 md:gap-10">
+			<div class="grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-3 md:gap-10">
 				{#each mangas as manga}
 					<a
 						href="/manga/{manga.slug}"
-						class="bg-gray-800 rounded-lg overflow-hidden shadow-xl transform hover:-translate-y-2 hover:shadow-2xl transition-all duration-300 group"
+						class="group transform overflow-hidden rounded-lg bg-gray-800 shadow-xl transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl"
 					>
 						<div class="h-64 w-full overflow-hidden">
 							<img
 								src={manga.cover_image_url}
 								alt="غلاف مانجا {manga.title}"
-								class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+								class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
 							/>
 						</div>
 						<div class="p-6">
-							<h3 class="text-2xl font-bold mb-2">{manga.title}</h3>
-							<p class="text-gray-400 leading-relaxed">{manga.description}</p>
+							<h3 class="mb-2 text-2xl font-bold">{manga.title}</h3>
+							<p class="leading-relaxed text-gray-400">{manga.description}</p>
 						</div>
 					</a>
 				{/each}
 			</div>
 		{:else}
-			<p class="text-center text-gray-400 text-xl">لا توجد مانجا تطابق خيارات البحث الحالية.</p>
+			<p class="text-center text-xl text-gray-400">لا توجد مانجا تطابق خيارات البحث الحالية.</p>
 		{/if}
 	</main>
 </div>
@@ -133,7 +153,10 @@
 		height: 20px;
 		background-color: #87ceeb;
 		border-radius: 50%;
-		box-shadow: 0 0 10px #87ceeb, 0 0 20px #87ceeb, 0 0 40px #fff;
+		box-shadow:
+			0 0 10px #87ceeb,
+			0 0 20px #87ceeb,
+			0 0 40px #fff;
 		transform: translate(-50%, -50%);
 		animation: charge 1.5s ease-in-out forwards;
 	}
@@ -156,11 +179,17 @@
 		}
 		50% {
 			transform: translate(-50%, -50%) scale(1.5);
-			box-shadow: 0 0 20px #87ceeb, 0 0 40px #87ceeb, 0 0 80px #fff;
+			box-shadow:
+				0 0 20px #87ceeb,
+				0 0 40px #87ceeb,
+				0 0 80px #fff;
 		}
 		100% {
 			transform: translate(-50%, -50%) scale(1);
-			box-shadow: 0 0 10px #87ceeb, 0 0 20px #87ceeb, 0 0 40px #fff;
+			box-shadow:
+				0 0 10px #87ceeb,
+				0 0 20px #87ceeb,
+				0 0 40px #fff;
 		}
 	}
 

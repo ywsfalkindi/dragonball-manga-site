@@ -12,49 +12,52 @@
 	<title>تسجيل الدخول</title>
 </svelte:head>
 
-<div class="min-h-screen bg-gray-900 flex items-center justify-center font-[Tajawal]">
-	<div class="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md">
-		<h1 class="text-3xl font-bold text-center text-white mb-6">تسجيل الدخول</h1>
+<div class="flex min-h-screen items-center justify-center bg-gray-900 font-[Tajawal]">
+	<div class="w-full max-w-md rounded-lg bg-gray-800 p-8 shadow-xl">
+		<h1 class="mb-6 text-center text-3xl font-bold text-white">تسجيل الدخول</h1>
 
 		{#if registrationSuccess}
-			<div class="bg-green-500/20 border border-green-500 text-green-300 text-sm rounded-lg p-3 text-center mb-4">
+			<div
+				class="mb-4 rounded-lg border border-green-500 bg-green-500/20 p-3 text-center text-sm text-green-300"
+			>
 				تم إنشاء حسابك بنجاح! يمكنك الآن تسجيل الدخول.
 			</div>
 		{/if}
 
 		<form method="POST">
 			<div class="mb-4">
-				<label for="email" class="block text-gray-300 mb-2">البريد الإلكتروني</label>
+				<label for="email" class="mb-2 block text-gray-300">البريد الإلكتروني</label>
 				<input
 					type="email"
 					name="email"
 					id="email"
-					class="w-full bg-gray-700 text-white rounded p-2 border border-gray-600 focus:outline-none focus:border-orange-500"
+					class="w-full rounded border border-gray-600 bg-gray-700 p-2 text-white focus:border-orange-500 focus:outline-none"
 					required
 				/>
 			</div>
 			<div class="mb-6">
-				<label for="password" class="block text-gray-300 mb-2">كلمة المرور</label>
+				<label for="password" class="mb-2 block text-gray-300">كلمة المرور</label>
 				<input
 					type="password"
 					name="password"
 					id="password"
-					class="w-full bg-gray-700 text-white rounded p-2 border border-gray-600 focus:outline-none focus:border-orange-500"
+					class="w-full rounded border border-gray-600 bg-gray-700 p-2 text-white focus:border-orange-500 focus:outline-none"
 					required
 				/>
 			</div>
 			{#if form?.error}
-				<p class="text-red-500 text-center mb-4">{form.error}</p>
+				<p class="mb-4 text-center text-red-500">{form.error}</p>
 			{/if}
 			<button
 				type="submit"
-				class="w-full bg-orange-600 text-white font-bold py-2 px-4 rounded hover:bg-orange-700 transition-colors"
+				class="w-full rounded bg-orange-600 px-4 py-2 font-bold text-white transition-colors hover:bg-orange-700"
 			>
 				تسجيل الدخول
 			</button>
 		</form>
-		<p class="text-center text-gray-400 mt-4">
-			ليس لديك حساب؟ <a href="/signup" class="text-orange-500 hover:underline">أنشئ حسابًا جديدًا</a>
+		<p class="mt-4 text-center text-gray-400">
+			ليس لديك حساب؟ <a href="/signup" class="text-orange-500 hover:underline">أنشئ حسابًا جديدًا</a
+			>
 		</p>
 	</div>
 </div>

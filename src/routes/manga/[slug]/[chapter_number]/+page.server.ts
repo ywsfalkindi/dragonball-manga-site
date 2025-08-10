@@ -76,7 +76,9 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 			}),
 			pb
 				.collection('chapters')
-				.getFirstListItem(`manga.id = "${manga.id}" && chapter_number = ${Number(params.chapter_number) + 1}`)
+				.getFirstListItem(
+					`manga.id = "${manga.id}" && chapter_number = ${Number(params.chapter_number) + 1}`
+				)
 				.catch(() => null)
 		]);
 
@@ -100,75 +102,76 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 };
 
 export const actions: Actions = {
-    addComment: async ({ locals, request, params }) => {
-    if (!locals.user) {
-        throw redirect(303, '/login');
-    }
+	addComment: async ({ locals, request, params }) => {
+		if (!locals.user) {
+			throw redirect(303, '/login');
+		}
 
-    const data = await request.formData();
-    const rawContent = data.get('content') as string;
-    const parentId = data.get('parentId') as string | null; // <-- ✨ إضافة: استقبال parentId
+		const data = await request.formData();
+		const rawContent = data.get('content') as string;
+		const parentId = data.get('parentId') as string | null; // <-- ✨ إضافة: استقبال parentId
 
-    if (!rawContent || rawContent.trim().length === 0) {
-        return fail(400, { error: 'لا يمكن أن يكون التعليق فارغًا.' });
-    }
-    
-    const content = purify.sanitize(rawContent);
-    
-    const manga = await pb.collection('mangas').getFirstListItem(`slug = "${params.slug}"`);
-    const chapter = await pb.collection('chapters').getFirstListItem(`manga.id = "${manga.id}" && chapter_number = ${params.chapter_number}`);
+		if (!rawContent || rawContent.trim().length === 0) {
+			return fail(400, { error: 'لا يمكن أن يكون التعليق فارغًا.' });
+		}
 
-    try {
-        await pb.collection('comments').create({
-            content,
-            user: locals.user.id,
-            chapter: chapter.id,
-            parentComment: parentId || null // <-- ✨ إضافة: حفظ parentId
-        });
-        await grantXp(locals.user.id, 10);
-    } catch (err) {
-        return fail(500, { error: 'حدث خطأ ما أثناء إرسال التعليق.' });
-    }
+		const content = purify.sanitize(rawContent);
 
-    return { success: true };
-},
+		const manga = await pb.collection('mangas').getFirstListItem(`slug = "${params.slug}"`);
+		const chapter = await pb
+			.collection('chapters')
+			.getFirstListItem(`manga.id = "${manga.id}" && chapter_number = ${params.chapter_number}`);
 
-    toggleLike: async ({ locals, request }) => {
-        if (!locals.user) {
-            throw redirect(303, '/login');
-        }
+		try {
+			await pb.collection('comments').create({
+				content,
+				user: locals.user.id,
+				chapter: chapter.id,
+				parentComment: parentId || null // <-- ✨ إضافة: حفظ parentId
+			});
+			await grantXp(locals.user.id, 10);
+		} catch (err) {
+			return fail(500, { error: 'حدث خطأ ما أثناء إرسال التعليق.' });
+		}
 
-        const data = await request.formData();
-        const commentId = data.get('commentId') as string;
-        
-        try {
-            // PocketBase يستخدم `+=` و `-=` لتعديل العلاقات المتعددة
-            await pb.collection('comments').update(commentId, {
-                'likes+': locals.user.id
-            });
+		return { success: true };
+	},
 
-        try {
-                const comment = await pb.collection('comments').getOne(commentId, { fields: 'user' });
-                // نتأكد أن المستخدم لا يعجب بتعليقه الخاص
-                if (comment.user !== locals.user.id) {
-                    await grantXp(comment.user, 5); // منح 5 XP لصاحب التعليق
-                }
-            } catch (xpError) {
-                // تجاهل الخطأ في حال فشل منح XP حتى لا يؤثر على الإعجاب
-                console.error("Failed to grant XP for like:", xpError);
-            }
+	toggleLike: async ({ locals, request }) => {
+		if (!locals.user) {
+			throw redirect(303, '/login');
+		}
 
-        } catch (err) {
-            // إذا كان المستخدم قد أعجب به بالفعل، سيحدث خطأ، لذا سنقوم بإزالة الإعجاب
-            try {
-                await pb.collection('comments').update(commentId, {
-                    'likes-': locals.user.id
-                });
-            } catch (innerErr) {
-                return fail(500, { error: 'فشل التفاعل مع التعليق.' });
-            }
-        }
+		const data = await request.formData();
+		const commentId = data.get('commentId') as string;
 
-        return { success: true };
-    }
+		try {
+			// PocketBase يستخدم `+=` و `-=` لتعديل العلاقات المتعددة
+			await pb.collection('comments').update(commentId, {
+				'likes+': locals.user.id
+			});
+
+			try {
+				const comment = await pb.collection('comments').getOne(commentId, { fields: 'user' });
+				// نتأكد أن المستخدم لا يعجب بتعليقه الخاص
+				if (comment.user !== locals.user.id) {
+					await grantXp(comment.user, 5); // منح 5 XP لصاحب التعليق
+				}
+			} catch (xpError) {
+				// تجاهل الخطأ في حال فشل منح XP حتى لا يؤثر على الإعجاب
+				console.error('Failed to grant XP for like:', xpError);
+			}
+		} catch (err) {
+			// إذا كان المستخدم قد أعجب به بالفعل، سيحدث خطأ، لذا سنقوم بإزالة الإعجاب
+			try {
+				await pb.collection('comments').update(commentId, {
+					'likes-': locals.user.id
+				});
+			} catch (innerErr) {
+				return fail(500, { error: 'فشل التفاعل مع التعليق.' });
+			}
+		}
+
+		return { success: true };
+	}
 };

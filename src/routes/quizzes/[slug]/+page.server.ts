@@ -53,7 +53,7 @@ export const actions: Actions = {
 			const correctAnswersMap = new Map(correctQuestions.map((q: any) => [q.id, q.correct_option]));
 			let score = 0;
 			const answerRecords = [];
-			
+
 			let streakCounter = 0;
 			const timeLimit = quiz.time_limit || correctQuestions.length * 15;
 
@@ -74,7 +74,7 @@ export const actions: Actions = {
 
 						const streakBonus = streakCounter * 10;
 						questionScore += streakBonus;
-						
+
 						score += questionScore;
 					} else {
 						streakCounter = 0;

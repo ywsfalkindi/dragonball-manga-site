@@ -60,84 +60,83 @@
 	<title>إنشاء حساب جديد</title>
 </svelte:head>
 
-<div class="min-h-screen bg-gray-900 flex items-center justify-center font-[Tajawal]">
-	<div class="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md">
-		<h1 class="text-3xl font-bold text-center text-white mb-6">إنشاء حساب جديد</h1>
+<div class="flex min-h-screen items-center justify-center bg-gray-900 font-[Tajawal]">
+	<div class="w-full max-w-md rounded-lg bg-gray-800 p-8 shadow-xl">
+		<h1 class="mb-6 text-center text-3xl font-bold text-white">إنشاء حساب جديد</h1>
 		<form method="POST">
 			<div class="mb-4">
-				<label for="username" class="block text-gray-300 mb-2">اسم المستخدم</label>
+				<label for="username" class="mb-2 block text-gray-300">اسم المستخدم</label>
 				<input
 					type="text"
 					name="username"
 					id="username"
-					class="w-full bg-gray-700 text-white rounded p-2 border border-gray-600 focus:outline-none focus:border-orange-500"
+					class="w-full rounded border border-gray-600 bg-gray-700 p-2 text-white focus:border-orange-500 focus:outline-none"
 					required
 				/>
 			</div>
 
 			<div class="mb-4">
-				<label for="email" class="block text-gray-300 mb-2">البريد الإلكتروني</label>
+				<label for="email" class="mb-2 block text-gray-300">البريد الإلكتروني</label>
 				<input
 					type="email"
 					name="email"
 					id="email"
-					class="w-full bg-gray-700 text-white rounded p-2 border border-gray-600 focus:outline-none focus:border-orange-500"
+					class="w-full rounded border border-gray-600 bg-gray-700 p-2 text-white focus:border-orange-500 focus:outline-none"
 					required
 				/>
 			</div>
 
 			<div class="mb-4">
-				<label for="password" class="block text-gray-300 mb-2">كلمة المرور</label>
+				<label for="password" class="mb-2 block text-gray-300">كلمة المرور</label>
 				<input
 					type="password"
 					name="password"
 					id="password"
-					class="w-full bg-gray-700 text-white rounded p-2 border border-gray-600 focus:outline-none focus:border-orange-500"
+					class="w-full rounded border border-gray-600 bg-gray-700 p-2 text-white focus:border-orange-500 focus:outline-none"
 					bind:value={password}
 					required
 				/>
 				{#if password.length > 0}
 					<div class="mt-2 flex items-center">
-						<div class="w-full bg-gray-600 rounded-full h-2.5">
+						<div class="h-2.5 w-full rounded-full bg-gray-600">
 							<div
 								class="h-2.5 rounded-full transition-all duration-300 {passwordStrength.color}"
 								style="width: {(passwordStrength.score / 4) * 100}%"
 							></div>
 						</div>
-						<span class="text-sm text-gray-300 mr-3 whitespace-nowrap"
-							>{passwordStrength.text}</span
+						<span class="mr-3 text-sm whitespace-nowrap text-gray-300">{passwordStrength.text}</span
 						>
 					</div>
 				{/if}
 			</div>
 
 			<div class="mb-6">
-				<label for="passwordConfirm" class="block text-gray-300 mb-2">تأكيد كلمة المرور</label>
+				<label for="passwordConfirm" class="mb-2 block text-gray-300">تأكيد كلمة المرور</label>
 				<input
 					type="password"
 					name="passwordConfirm"
 					id="passwordConfirm"
-					class="w-full bg-gray-700 text-white rounded p-2 border border-gray-600 focus:outline-none focus:border-orange-500"
+					class="w-full rounded border border-gray-600 bg-gray-700 p-2 text-white focus:border-orange-500 focus:outline-none"
 					bind:value={passwordConfirm}
 					required
 				/>
 			</div>
 
 			{#if clientError}
-				<p class="text-yellow-400 text-center mb-4">{clientError}</p>
+				<p class="mb-4 text-center text-yellow-400">{clientError}</p>
 			{:else if form?.error}
-				<p class="text-red-500 text-center mb-4">{form.error}</p>
+				<p class="mb-4 text-center text-red-500">{form.error}</p>
 			{/if}
-			
+
 			<button
 				type="submit"
-				class="w-full bg-orange-600 text-white font-bold py-2 px-4 rounded hover:bg-orange-700 transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed"
+				class="w-full rounded bg-orange-600 px-4 py-2 font-bold text-white transition-colors hover:bg-orange-700 disabled:cursor-not-allowed disabled:bg-gray-500"
 				disabled={clientError !== null}
 			>
 				إنشاء الحساب
 			</button>
 		</form>
-		<p class="text-center text-gray-400 mt-4">
+		<p class="mt-4 text-center text-gray-400">
 			لديك حساب بالفعل؟ <a href="/login" class="text-orange-500 hover:underline">سجل الدخول</a>
 		</p>
 	</div>

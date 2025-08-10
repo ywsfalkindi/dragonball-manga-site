@@ -108,7 +108,7 @@
 								<p>{finalMessage}</p>
 							</div>
 						{:else}
-							<h2 class="text-2xl font-bold mb-4">اختر أمنيتك يا محارب!</h2>
+							<h2 class="mb-4 text-2xl font-bold">اختر أمنيتك يا محارب!</h2>
 							<div class="space-y-3">
 								{#each selectedWishes as wish}
 									<form method="POST" action="?/grantWish">
@@ -127,11 +127,11 @@
 	</div>
 {/if}
 
-<div class="min-h-screen bg-gray-900 text-white font-[Tajawal] p-8" dir="rtl">
+<div class="min-h-screen bg-gray-900 p-8 font-[Tajawal] text-white" dir="rtl">
 	<div class="container mx-auto">
 		{#if avatarSuccessMessage}
 			<div
-				class="fixed top-20 right-1/2 translate-x-1/2 z-[9999] bg-green-600 text-white py-2 px-6 rounded-lg shadow-lg"
+				class="fixed top-20 right-1/2 z-[9999] translate-x-1/2 rounded-lg bg-green-600 px-6 py-2 text-white shadow-lg"
 				transition:fly={{ y: -20, duration: 300 }}
 			>
 				{avatarSuccessMessage}
@@ -139,108 +139,108 @@
 		{/if}
 
 		<div class="mb-10 flex flex-col items-center gap-4 text-center">
-	<div class="relative">
-		{#if data.user.avatarUrl}
-			<img
-				src={data.user.avatarUrl}
-				alt="الصورة الرمزية لـ {data.user.username}"
-				class="h-28 w-28 rounded-full border-4 border-gray-700 object-cover"
-			/>
-		{:else}
-			<div
-				class="flex h-28 w-28 items-center justify-center rounded-full border-4 border-gray-700 bg-gray-700 text-4xl font-bold text-white"
-			>
-				{(data.user.username || '?').charAt(0).toUpperCase()}
+			<div class="relative">
+				{#if data.user.avatarUrl}
+					<img
+						src={data.user.avatarUrl}
+						alt="الصورة الرمزية لـ {data.user.username}"
+						class="h-28 w-28 rounded-full border-4 border-gray-700 object-cover"
+					/>
+				{:else}
+					<div
+						class="flex h-28 w-28 items-center justify-center rounded-full border-4 border-gray-700 bg-gray-700 text-4xl font-bold text-white"
+					>
+						{(data.user.username || '?').charAt(0).toUpperCase()}
+					</div>
+				{/if}
 			</div>
-		{/if}
-	</div>
 
-	<div>
-		<h1 class="text-4xl font-bold">ملفي الشخصي</h1>
-		<p class="mt-1 text-gray-400">مرحباً بعودتك، {data.user?.username}</p>
-		{#if data.user.title}
-			<span class="mt-2 inline-block rounded-full bg-yellow-500 py-1 px-2 text-xs font-bold text-black">
-				{data.user.title}
-			</span>
-		{/if}
-	</div>
+			<div>
+				<h1 class="text-4xl font-bold">ملفي الشخصي</h1>
+				<p class="mt-1 text-gray-400">مرحباً بعودتك، {data.user?.username}</p>
+				{#if data.user.title}
+					<span
+						class="mt-2 inline-block rounded-full bg-yellow-500 px-2 py-1 text-xs font-bold text-black"
+					>
+						{data.user.title}
+					</span>
+				{/if}
+			</div>
 
-	<div class="flex items-center gap-2">
-		<form method="POST" action="?/updateAvatar" enctype="multipart/form-data" use:enhance>
-			<label
-				for="avatar-upload"
-				class="cursor-pointer rounded-md bg-gray-700 py-1 px-3 text-sm text-white transition-colors hover:bg-gray-600"
-				>تغيير الصورة</label
-			>
-			<input
-				type="file"
-				name="avatar"
-				id="avatar-upload"
-				class="hidden"
-				accept="image/*"
-				on:change={(e) => e.currentTarget.form?.requestSubmit()}
-			/>
-		</form>
-		{#if data.user.avatar}
-			<form method="POST" action="?/deleteAvatar" use:enhance>
-				<button
-					type="submit"
-					class="rounded-md bg-red-500/10 py-1 px-3 text-sm text-red-400 transition-colors hover:bg-red-500/20"
-					>حذف</button
-				>
+			<div class="flex items-center gap-2">
+				<form method="POST" action="?/updateAvatar" enctype="multipart/form-data" use:enhance>
+					<label
+						for="avatar-upload"
+						class="cursor-pointer rounded-md bg-gray-700 px-3 py-1 text-sm text-white transition-colors hover:bg-gray-600"
+						>تغيير الصورة</label
+					>
+					<input
+						type="file"
+						name="avatar"
+						id="avatar-upload"
+						class="hidden"
+						accept="image/*"
+						on:change={(e) => e.currentTarget.form?.requestSubmit()}
+					/>
+				</form>
+				{#if data.user.avatar}
+					<form method="POST" action="?/deleteAvatar" use:enhance>
+						<button
+							type="submit"
+							class="rounded-md bg-red-500/10 px-3 py-1 text-sm text-red-400 transition-colors hover:bg-red-500/20"
+							>حذف</button
+						>
+					</form>
+				{/if}
+			</div>
+
+			<form method="POST" action="?/logout" class="mt-4 w-full max-w-xs">
+				<button class="w-full rounded bg-red-600 px-4 py-2 hover:bg-red-700"> تسجيل الخروج </button>
 			</form>
-		{/if}
-	</div>
+		</div>
 
-	<form method="POST" action="?/logout" class="mt-4 w-full max-w-xs">
-		<button class="w-full rounded bg-red-600 py-2 px-4 hover:bg-red-700"> تسجيل الخروج </button>
-	</form>
-</div>
-
-		<div class="bg-gray-800 p-6 rounded-lg shadow-lg mb-12" dir="rtl">
-			<div class="flex justify-between items-center mb-2">
+		<div class="mb-12 rounded-lg bg-gray-800 p-6 shadow-lg" dir="rtl">
+			<div class="mb-2 flex items-center justify-between">
 				<span class="font-bold text-orange-400">مستوى الطاقة : {data.user.power_level}</span>
-				<span class="text-sm text-gray-400"
-					>{data.user.xp} / {data.user.xp_to_next_level} XP</span
-				>
+				<span class="text-sm text-gray-400">{data.user.xp} / {data.user.xp_to_next_level} XP</span>
 			</div>
-			<div class="w-full bg-gray-700 rounded-full h-4">
+			<div class="h-4 w-full rounded-full bg-gray-700">
 				<div
-					class="bg-green-500 h-4 rounded-full transition-all duration-500"
+					class="h-4 rounded-full bg-green-500 transition-all duration-500"
 					style="width: {(data.user.xp / data.user.xp_to_next_level) * 100}%"
 				></div>
 			</div>
 		</div>
 
-		<div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-			<div class="bg-gray-800 p-6 rounded-lg shadow-lg">
-				<h2 class="text-2xl font-bold mb-4" dir="rtl">إحصائياتي</h2>
-				<div class="flex justify-around items-center">
+		<div class="mb-12 grid grid-cols-1 gap-8 md:grid-cols-2">
+			<div class="rounded-lg bg-gray-800 p-6 shadow-lg">
+				<h2 class="mb-4 text-2xl font-bold" dir="rtl">إحصائياتي</h2>
+				<div class="flex items-center justify-around">
 					<div class="text-center">
 						<h3 class="text-xl text-gray-400">المانجا المفضلة</h3>
-						<p class="text-5xl font-bold mt-2 text-orange-500">{data.stats.totalFavorites}</p>
+						<p class="mt-2 text-5xl font-bold text-orange-500">{data.stats.totalFavorites}</p>
 					</div>
 					<div class="text-center">
 						<h3 class="text-xl text-gray-400">الفصول المقروءة</h3>
-						<p class="text-5xl font-bold mt-2 text-orange-500">
+						<p class="mt-2 text-5xl font-bold text-orange-500">
 							{data.stats.totalChaptersRead}
 						</p>
-						<a href="/profile/history" class="text-sm mt-2 text-blue-400 hover:underline"
+						<a href="/profile/history" class="mt-2 text-sm text-blue-400 hover:underline"
 							>عرض السجل الكامل</a
 						>
 					</div>
 				</div>
 			</div>
 
-			<div class="bg-gray-800 p-6 rounded-lg shadow-lg" dir="rtl">
-				<h2 class="text-2xl font-bold mb-4">تغيير كلمة المرور</h2>
+			<div class="rounded-lg bg-gray-800 p-6 shadow-lg" dir="rtl">
+				<h2 class="mb-4 text-2xl font-bold">تغيير كلمة المرور</h2>
 				<form method="POST" action="?/changePassword" class="space-y-4">
 					<div>
 						<input
 							type="password"
 							name="oldPassword"
 							placeholder="كلمة المرور القديمة"
-							class="w-full bg-gray-700 text-white rounded p-2 border border-gray-600"
+							class="w-full rounded border border-gray-600 bg-gray-700 p-2 text-white"
 							required
 						/>
 					</div>
@@ -249,7 +249,7 @@
 							type="password"
 							name="newPassword"
 							placeholder="كلمة المرور الجديدة"
-							class="w-full bg-gray-700 text-white rounded p-2 border border-gray-600"
+							class="w-full rounded border border-gray-600 bg-gray-700 p-2 text-white"
 							required
 						/>
 					</div>
@@ -258,20 +258,20 @@
 							type="password"
 							name="newPasswordConfirm"
 							placeholder="تأكيد كلمة المرور الجديدة"
-							class="w-full bg-gray-700 text-white rounded p-2 border border-gray-600"
+							class="w-full rounded border border-gray-600 bg-gray-700 p-2 text-white"
 							required
 						/>
 					</div>
 					{#if form?.passwordError}
-						<p class="text-red-500 text-sm text-center">{form.passwordError}</p>
+						<p class="text-center text-sm text-red-500">{form.passwordError}</p>
 					{/if}
 
 					{#if passwordSuccessMessage}
-						<p class="text-green-500 text-sm text-center">{passwordSuccessMessage}</p>
+						<p class="text-center text-sm text-green-500">{passwordSuccessMessage}</p>
 					{/if}
 					<button
 						type="submit"
-						class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded hover:bg-blue-700 transition-colors"
+						class="w-full rounded bg-blue-600 px-4 py-2 font-bold text-white transition-colors hover:bg-blue-700"
 					>
 						حفظ التغييرات
 					</button>
@@ -279,16 +279,16 @@
 			</div>
 		</div>
 
-		<h2 class="text-3xl font-bold mb-6" dir="rtl">كرات التنين</h2>
-		<div class="bg-gray-800 p-6 rounded-lg shadow-lg">
-			<div class="flex flex-wrap justify-center items-center gap-4 mb-6">
+		<h2 class="mb-6 text-3xl font-bold" dir="rtl">كرات التنين</h2>
+		<div class="rounded-lg bg-gray-800 p-6 shadow-lg">
+			<div class="mb-6 flex flex-wrap items-center justify-center gap-4">
 				{#each { length: 7 } as _, i}
 					{@const ballNum = i + 1}
 					{@const hasBall = $collectedBallsStore.includes(ballNum)}
 					<img
 						src={`/dragonballs/db_${ballNum}.png`}
 						alt="كرة رقم {ballNum}"
-						class="w-16 h-16 transition-transform duration-300 {hasBall
+						class="h-16 w-16 transition-transform duration-300 {hasBall
 							? 'opacity-100'
 							: 'opacity-20 grayscale'}"
 						class:ready-to-summon={$collectedBallsStore.length === 7}
@@ -303,20 +303,20 @@
 			<form method="POST" action="?/summonShenron">
 				<button
 					type="submit"
-					class="w-full bg-yellow-500 text-gray-900 font-bold py-3 px-4 rounded-lg hover:bg-yellow-400 transition-colors disabled:bg-gray-600 disabled:cursor-not-allowed"
+					class="w-full rounded-lg bg-yellow-500 px-4 py-3 font-bold text-gray-900 transition-colors hover:bg-yellow-400 disabled:cursor-not-allowed disabled:bg-gray-600"
 					disabled={$collectedBallsStore.length < 7 || showSummoningScene}
 				>
-					 استدعاء شينرون
+					استدعاء شينرون
 				</button>
 			</form>
 			{#if form?.error && !form.wishes}
-				<p class="text-red-500 text-center mt-4">{form.error}</p>
+				<p class="mt-4 text-center text-red-500">{form.error}</p>
 			{/if}
 		</div>
 
-		<h2 class="text-3xl font-bold mb-6 mt-12" dir="rtl">قائمتي المفضلة</h2>
+		<h2 class="mt-12 mb-6 text-3xl font-bold" dir="rtl">قائمتي المفضلة</h2>
 		{#if data.favorites.length > 0}
-			<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
+			<div class="grid grid-cols-2 gap-6 md:grid-cols-4 lg:grid-cols-6">
 				{#each data.favorites as fav (fav.id)}
 					{#if fav.expand?.manga}
 						<MangaCard manga={fav.expand.manga} />
@@ -324,11 +324,11 @@
 				{/each}
 			</div>
 		{:else}
-			<div class="text-center py-10 bg-gray-800 rounded-lg" dir="rtl">
+			<div class="rounded-lg bg-gray-800 py-10 text-center" dir="rtl">
 				<p class="text-lg text-gray-400">قائمتك فارغة حالياً</p>
 				<a
 					href="/"
-					class="mt-4 inline-block bg-orange-600 text-white font-bold py-2 px-6 rounded-lg transition-colors hover:bg-orange-500"
+					class="mt-4 inline-block rounded-lg bg-orange-600 px-6 py-2 font-bold text-white transition-colors hover:bg-orange-500"
 				>
 					تصفح المانجا
 				</a>
@@ -384,13 +384,11 @@
 
 	@keyframes circle-in {
 		0% {
-			transform: translate(-50%, -50%) rotate(calc(var(--i) * 120deg)) translateX(100vw)
-				scale(0.5);
+			transform: translate(-50%, -50%) rotate(calc(var(--i) * 120deg)) translateX(100vw) scale(0.5);
 			opacity: 1;
 		}
 		60% {
-			transform: translate(-50%, -50%) rotate(calc(var(--i) * -50deg)) translateX(100px)
-				scale(1.2);
+			transform: translate(-50%, -50%) rotate(calc(var(--i) * -50deg)) translateX(100px) scale(1.2);
 			opacity: 1;
 		}
 		90% {

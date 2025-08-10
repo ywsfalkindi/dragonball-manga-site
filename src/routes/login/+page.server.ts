@@ -10,10 +10,9 @@ export const actions: Actions = {
 
 		try {
 			await pb.collection('users').authWithPassword(email, password);
-            
-            // هنا السر: نحفظ بيانات المصادقة في كوكيز المتصفح
-            cookies.set('pb_auth', pb.authStore.exportToCookie(), { path: '/' });
 
+			// هنا السر: نحفظ بيانات المصادقة في كوكيز المتصفح
+			cookies.set('pb_auth', pb.authStore.exportToCookie(), { path: '/' });
 		} catch (err) {
 			console.error('Login failed:', err);
 			return { error: 'البريد الإلكتروني أو كلمة المرور غير صحيحة.' };

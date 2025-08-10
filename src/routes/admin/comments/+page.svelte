@@ -54,16 +54,16 @@
 	<title>إدارة التعليقات</title>
 </svelte:head>
 
-<div class="p-8 font-[Tajawal] bg-gray-900 min-h-screen text-white">
-	<a href="/admin" class="text-blue-400 hover:underline mb-8 block text-right">
+<div class="min-h-screen bg-gray-900 p-8 font-[Tajawal] text-white">
+	<a href="/admin" class="mb-8 block text-right text-blue-400 hover:underline">
 		&larr; العودة إلى لوحة التحكم
 	</a>
-	<h1 class="text-4xl font-bold mb-4 text-right">إدارة التعليقات</h1>
+	<h1 class="mb-4 text-right text-4xl font-bold">إدارة التعليقات</h1>
 
-	<div class="flex border-b border-gray-700 mb-6 justify-end">
+	<div class="mb-6 flex justify-end border-b border-gray-700">
 		<button
 			on:click={() => (activeTab = 'pending')}
-			class="py-2 px-4 transition-colors {activeTab === 'pending'
+			class="px-4 py-2 transition-colors {activeTab === 'pending'
 				? 'border-b-2 border-orange-500 text-orange-500'
 				: 'text-gray-400 hover:text-white'}"
 		>
@@ -71,7 +71,7 @@
 		</button>
 		<button
 			on:click={() => (activeTab = 'approved')}
-			class="py-2 px-4 transition-colors {activeTab === 'approved'
+			class="px-4 py-2 transition-colors {activeTab === 'approved'
 				? 'border-b-2 border-orange-500 text-orange-500'
 				: 'text-gray-400 hover:text-white'}"
 		>
@@ -80,12 +80,12 @@
 	</div>
 
 	<div class="space-y-6">
-		{#each (activeTab === 'pending' ? pendingComments : approvedComments) as comment (comment.id)}
+		{#each activeTab === 'pending' ? pendingComments : approvedComments as comment (comment.id)}
 			<div
-				class="bg-gray-800 p-4 rounded-lg shadow-lg flex flex-row-reverse items-start gap-4 text-right"
+				class="flex flex-row-reverse items-start gap-4 rounded-lg bg-gray-800 p-4 text-right shadow-lg"
 			>
 				<div class="flex-grow">
-					<div class="flex items-center gap-3 mb-2 justify-end">
+					<div class="mb-2 flex items-center justify-end gap-3">
 						<span class="font-bold text-orange-400">
 							{comment.expand?.user?.username || 'مستخدم محذوف'}
 						</span>
@@ -102,30 +102,30 @@
 								name="content"
 								bind:value={editingContent}
 								rows="3"
-								class="w-full bg-gray-700 p-2 rounded"
+								class="w-full rounded bg-gray-700 p-2"
 							/>
 							{#if form?.editError && editingId === comment.id}
-								<p class="text-red-500 text-sm mt-1">{form.editError}</p>
+								<p class="mt-1 text-sm text-red-500">{form.editError}</p>
 							{/if}
-							<div class="flex gap-2 mt-2 justify-end">
-								<button type="submit" class="bg-green-600 text-sm py-1 px-3 rounded">حفظ</button>
+							<div class="mt-2 flex justify-end gap-2">
+								<button type="submit" class="rounded bg-green-600 px-3 py-1 text-sm">حفظ</button>
 								<button
 									on:click={() => (editingId = null)}
 									type="button"
-									class="bg-gray-600 text-sm py-1 px-3 rounded"
+									class="rounded bg-gray-600 px-3 py-1 text-sm"
 								>
 									إلغاء
 								</button>
 							</div>
 						</form>
 					{:else}
-						<div class="text-gray-300 prose prose-invert max-w-none">
+						<div class="prose prose-invert max-w-none text-gray-300">
 							{@html comment.content}
 						</div>
 					{/if}
 
 					{#if comment.expand?.chapter}
-						<div class="text-xs text-blue-400 mt-2">
+						<div class="mt-2 text-xs text-blue-400">
 							<a
 								href="/manga/{comment.expand.chapter.expand.manga.slug}/{comment.expand.chapter
 									.chapter_number}"
@@ -139,13 +139,13 @@
 					{/if}
 				</div>
 
-				<div class="flex flex-col gap-2 flex-shrink-0">
+				<div class="flex flex-shrink-0 flex-col gap-2">
 					{#if activeTab === 'pending'}
 						<form method="POST" action="?/approveComment" use:enhance={handleEnhance}>
 							<input type="hidden" name="commentId" value={comment.id} />
 							<button
 								type="submit"
-								class="bg-green-600 text-white w-full py-1 px-3 rounded text-sm hover:bg-green-700"
+								class="w-full rounded bg-green-600 px-3 py-1 text-sm text-white hover:bg-green-700"
 							>
 								موافقة
 							</button>
@@ -156,7 +156,7 @@
 							editingId = comment.id;
 							editingContent = comment.content.replace(/<br\s*\/?>/gi, '\n');
 						}}
-						class="bg-blue-600 text-white py-1 px-3 rounded text-sm hover:bg-blue-700"
+						class="rounded bg-blue-600 px-3 py-1 text-sm text-white hover:bg-blue-700"
 					>
 						تعديل
 					</button>
@@ -164,7 +164,7 @@
 						<input type="hidden" name="commentId" value={comment.id} />
 						<button
 							type="submit"
-							class="bg-red-600 text-white w-full py-1 px-3 rounded text-sm hover:bg-red-700"
+							class="w-full rounded bg-red-600 px-3 py-1 text-sm text-white hover:bg-red-700"
 						>
 							حذف
 						</button>

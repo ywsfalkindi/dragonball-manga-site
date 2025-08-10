@@ -6,11 +6,11 @@ import { persisted } from 'svelte-persisted-store';
 export const readingMode = persisted('readingMode', 'vertical');
 
 // الخيارات: 'single' أو 'double'
-export const pageDisplayMode = persisted('pageDisplayMode', 'single'); 
+export const pageDisplayMode = persisted('pageDisplayMode', 'single');
 
 // ✨ إضافات جديدة ✨
 // الخيارات: 'black', 'white', '#f4e8d8'
-export const readerBackgroundColor = persisted('readerBackgroundColor', 'black'); 
+export const readerBackgroundColor = persisted('readerBackgroundColor', 'black');
 
 // الخيارات: 'fit-width', 'fit-height', 'original'
 export const imageFitMode = persisted('imageFitMode', 'fit-width');

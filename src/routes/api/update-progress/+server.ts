@@ -16,15 +16,14 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 	try {
 		// أولاً، نحاول العثور على السجل الموجود
-		const record = await pb.collection('read_history').getFirstListItem(
-			`user.id = "${locals.user.id}" && chapter.id = "${chapterId}"`
-		);
+		const record = await pb
+			.collection('read_history')
+			.getFirstListItem(`user.id = "${locals.user.id}" && chapter.id = "${chapterId}"`);
 
 		// إذا وجدناه، نقوم بتحديثه
 		await pb.collection('read_history').update(record.id, {
 			last_page_read: page
 		});
-
 	} catch (err: any) {
 		// إذا لم يتم العثور على السجل (وهذا هو الخطأ المتوقع)، نقوم بإنشائه
 		if (err.status === 404) {
@@ -40,12 +39,12 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 				});
 			} catch (createErr) {
 				// معالجة أي خطأ قد يحدث أثناء محاولة الإنشاء
-				console.error("فشل في إنشاء سجل قراءة جديد:", createErr);
+				console.error('فشل في إنشاء سجل قراءة جديد:', createErr);
 				throw error(500, 'فشل إنشاء سجل القراءة.');
 			}
 		} else {
 			// لأي أخطاء أخرى، يتم تسجيلها وإظهار خطأ عام
-			console.error("فشل في تحديث التقدم:", err);
+			console.error('فشل في تحديث التقدم:', err);
 			throw error(500, 'فشل تحديث سجل القراءة.');
 		}
 	}

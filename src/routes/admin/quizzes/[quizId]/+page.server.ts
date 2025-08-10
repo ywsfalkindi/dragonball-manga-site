@@ -37,7 +37,7 @@ export const actions: Actions = {
 	updateQuizDetails: async ({ locals, request, params }) => {
 		if (!locals.admin) throw redirect(303, '/');
 		const formData = await request.formData();
-		
+
 		const dataToUpdate: { [key: string]: any } = {
 			title: formData.get('title'),
 			slug: formData.get('slug'),
@@ -50,7 +50,7 @@ export const actions: Actions = {
 
 		const timeLimitRaw = formData.get('time_limit') as string;
 		const timeLimit = parseInt(timeLimitRaw, 10);
-		
+
 		dataToUpdate.time_limit = !isNaN(timeLimit) && timeLimit > 0 ? timeLimit : null;
 
 		try {
@@ -76,22 +76,22 @@ export const actions: Actions = {
 			return fail(400, { type: 'question', success: false, message: 'فشل ربط الأسئلة.' });
 		}
 	},
-    
-    // إجراء لإلغاء ربط سؤال من الاختبار
-    unlinkQuestion: async ({ locals, request, params }) => {
-        if (!locals.admin) throw redirect(303, '/');
-        const formData = await request.formData();
-        const questionId = formData.get('questionId') as string;
 
-        try {
-            await pb.collection('quizzes').update(params.quizId, {
-                'questions-': questionId
-            });
-            return { type: 'question', success: true, message: 'تمت إزالة السؤال من الاختبار.' };
-        } catch (err) {
-            return fail(400, { type: 'question', success: false, message: 'فشل إلغاء ربط السؤال.' });
-        }
-    },
+	// إجراء لإلغاء ربط سؤال من الاختبار
+	unlinkQuestion: async ({ locals, request, params }) => {
+		if (!locals.admin) throw redirect(303, '/');
+		const formData = await request.formData();
+		const questionId = formData.get('questionId') as string;
+
+		try {
+			await pb.collection('quizzes').update(params.quizId, {
+				'questions-': questionId
+			});
+			return { type: 'question', success: true, message: 'تمت إزالة السؤال من الاختبار.' };
+		} catch (err) {
+			return fail(400, { type: 'question', success: false, message: 'فشل إلغاء ربط السؤال.' });
+		}
+	},
 
 	addQuestion: async ({ locals, request }) => {
 		if (!locals.admin) throw redirect(303, '/');
@@ -107,7 +107,7 @@ export const actions: Actions = {
 			explanation: formData.get('explanation') || '',
 			category: formData.get('category') || 'عام',
 			difficulty: formData.get('difficulty') || 'متوسط',
-            order: 1 
+			order: 1
 		};
 
 		if (questionType === 'multiple_choice') {
@@ -126,10 +126,14 @@ export const actions: Actions = {
 			await pb.collection('questions').create(dataToCreate);
 			return { type: 'question', success: true, message: 'تمت إضافة السؤال إلى بنك الأسئلة.' };
 		} catch (err) {
-			console.error("Add question error:", err);
-            // @ts-ignore
-			console.error("PocketBase response:", JSON.stringify(err.response, null, 2));
-			return fail(400, { type: 'question', success: false, message: 'فشلت إضافة السؤال للبنك. تأكد من أن جميع الحقول ممتلئة.' });
+			console.error('Add question error:', err);
+			// @ts-ignore
+			console.error('PocketBase response:', JSON.stringify(err.response, null, 2));
+			return fail(400, {
+				type: 'question',
+				success: false,
+				message: 'فشلت إضافة السؤال للبنك. تأكد من أن جميع الحقول ممتلئة.'
+			});
 		}
 	},
 
@@ -144,5 +148,5 @@ export const actions: Actions = {
 		} catch (err) {
 			return fail(400, { type: 'question', success: false, message: 'فشل حذف السؤال.' });
 		}
-	},
+	}
 };

@@ -1,4 +1,4 @@
 @import 'tailwindcss';
 .manga-card-image-container {
-  aspect-ratio: 2 / 3;
+	aspect-ratio: 2 / 3;
 }

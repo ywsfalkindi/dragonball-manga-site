@@ -4,7 +4,8 @@ import { fail, redirect } from '@sveltejs/kit';
 import type { Actions } from './$types';
 
 export const actions: Actions = {
-	default: async ({ request, cookies }) => { // <-- إضافة cookies هنا
+	default: async ({ request, cookies }) => {
+		// <-- إضافة cookies هنا
 		const data = await request.formData();
 		const username = data.get('username') as string;
 		const email = data.get('email') as string;
@@ -65,10 +66,9 @@ export const actions: Actions = {
 		try {
 			// نحاول تسجيل دخول المستخدم الجديد بنفس البيانات التي أدخلها
 			await pb.collection('users').authWithPassword(email, password);
-			
+
 			// إذا نجح، نقوم بتعيين الكوكيز تمامًا كما نفعل في صفحة تسجيل الدخول
 			cookies.set('pb_auth', pb.authStore.exportToCookie(), { path: '/' });
-
 		} catch (authError) {
 			console.error('Auto-login failed after signup:', authError);
 			// إذا فشل تسجيل الدخول لسبب غير متوقع، نوجهه لصفحة الدخول كخطة بديلة
