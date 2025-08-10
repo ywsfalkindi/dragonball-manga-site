@@ -241,7 +241,7 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-	class="reader-container min-h-screen font-[Tajawal]"
+	class="reader-container min-h-screen font-[Tajawal] flex flex-col"
 	style="background-color: {$readerBackgroundColor};"
 	on:mousemove={resetTimer}
 	on:touchstart={resetTimer}
@@ -405,7 +405,7 @@ currentPageIndex !== i}
 		<div class="fixed inset-0 z-20 bg-black/30" on:click={() => (showThumbnails = false)}></div>
 	{/if}
 
-	<main class="flex flex-col items-center pb-4 pt-8">
+	<main class="flex flex-col items-center pb-4 pt-8 flex-grow">
 		{#if pages.length > 0}
 			{#if $readingMode === 'vertical'}
 				{#each pages as page, i}
@@ -427,7 +427,7 @@ currentPageIndex !== i}
 			{:else}
 				{@const step = $pageDisplayMode === 'double' ?
 2 : 1}
-				<div class="flex min-h-[70vh] w-full flex-col items-center justify-center">
+				<div class="flex w-full flex-col items-center justify-center">
 					<div class="relative flex w-full max-w-7xl items-center justify-center">
 						<!-- svelte-ignore a11y_consider_explicit_label -->
 						<button

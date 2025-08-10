@@ -72,7 +72,7 @@
 							href="/manga/{manga.slug}/{lastReadChapter.chapter_number}?page={lastReadChapter.last_page_read}"
 							class="inline-block bg-green-600 text-white font-bold py-2 px-6 rounded-lg transition-colors hover:bg-green-500"
 						>
-							🚀 أكمل القراءة (الفصل #{lastReadChapter.chapter_number})
+							🚀 أكمل القراءة (الفصل {lastReadChapter.chapter_number})
 						</a>
 					{/if}
 				</div>
@@ -80,7 +80,7 @@
 		</div>
 	</header>
 
-	<main class="container mx-auto px-4 py-12">
+	<main class="container mx-auto px-4 py-12" dir="rtl">
 		<h2 class="text-3xl font-bold mb-6 text-orange-500">قائمة الفصول</h2>
 		<div class="bg-gray-800 rounded-lg shadow-lg">
 			<ul class="divide-y divide-gray-700">
@@ -91,8 +91,8 @@
 							href="/manga/{manga.slug}/{chapter.chapter_number}"
 							class="p-4 hover:bg-gray-700/50 transition-colors duration-200 flex items-center justify-between"
 						>
-							<div class="flex items-center space-x-3 rtl:space-x-reverse">
-								<span class="text-xl font-semibold">الفصل #{chapter.chapter_number}</span>
+							<div class="flex items-center space-x-3 rtl:space-x-reverse gap-x-2">
+								<span class="text-xl font-semibold">الفصل {chapter.chapter_number}</span>
 								{#if readChapterIds.has(chapter.id)}
 									<span class="text-xs bg-blue-500 text-white py-1 px-2 rounded-full">مقروء</span
 									>
@@ -104,7 +104,7 @@
 								{/if}
 							</div>
 							<span
-								class="bg-orange-500 text-white text-sm font-bold py-1 px-3 rounded-full hidden sm:inline-block"
+								class="bg-orange-500 text-white text-sm font-bold py-1 px-3 rounded-full"
 								>اقرأ الآن</span
 							>
 						</a>
@@ -113,7 +113,7 @@
 					<li class="p-6 text-center text-gray-400">لم تتم إضافة أي فصول لهذه المانجا بعد.</li>
 				{/each}
 			</ul>
-			<div class="flex justify-center items-center space-x-4 mt-8 pb-6 text-white" dir="ltr">
+			<div class="flex justify-center items-center space-x-4 mt-8 pb-6 text-white">
 				<a
 					href="?page={chaptersResult.page - 1}"
 					class="py-2 px-4 bg-gray-700 rounded {chaptersResult.page === 1
