@@ -53,13 +53,28 @@ export interface ReadHistoryRecord {
 	manga: string;
 	chapter: string; // هذا هو ID الفصل
 	last_page_read: number;
+	created: string;
 	updated: string;
-	expand?: {
-		chapter: Chapter;
+	expand: {
+		manga: Manga; // نستخدم النوع المفصل للمانجا
+		chapter: Chapter; // نستخدم النوع المفصل للفصل
 	};
 }
 
 // نوع يمثل الفصل الأخير الذي تمت قراءته مع تفاصيله
 export interface LastReadChapterInfo extends Chapter {
 	last_page_read: number;
+}
+
+interface MangaRecord {
+	id: string;
+	slug: string;
+	title: string;
+	cover: string;
+}
+
+// تعريف شكل بيانات الفصل الأساسية
+interface ChapterRecord {
+	id: string;
+	chapter_number: number;
 }
