@@ -1,5 +1,4 @@
 <!-- src/lib/components/MangaHeader.svelte -->
-<!-- src/lib/components/MangaHeader.svelte -->
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	// ✨ 1. استيراد الدالة السحرية

@@ -1,82 +1,73 @@
 // src/routes/signup/+page.server.ts
-import { pb } from '$lib/pocketbase';
+
 import { fail, redirect } from '@sveltejs/kit';
-import type { Actions } from './$types';
+import type { Actions, PageServerLoad } from './$types';
+import { pb } from '$lib/pocketbase';
+import { signupSchema } from '$lib/schemas'; // <-- استيراد مخطط التحقق الجديد
+import { zod } from 'sveltekit-superforms/adapters'; // <-- محول Zod لـ Superforms
+import { superValidate } from 'sveltekit-superforms/server'; // <-- "السر" الكبير!
+
+// هذه الدالة load تعمل قبل تحميل الصفحة
+// نستخدمها لإنشاء نموذج فارغ مرتبط بمخطط Zod الخاص بنا
+// هذا يضمن أن الواجهة الأمامية والخادم يتشاركان نفس "فهم" النموذج
+export const load: PageServerLoad = async () => {
+	return {
+		form: await superValidate(zod(signupSchema))
+	};
+};
 
 export const actions: Actions = {
+	// هذا هو الـ "action" الرئيسي لإنشاء الحساب
 	default: async ({ request, cookies }) => {
-		// <-- إضافة cookies هنا
-		const data = await request.formData();
-		const username = data.get('username') as string;
-		const email = data.get('email') as string;
-		const password = data.get('password') as string;
-		const passwordConfirm = data.get('passwordConfirm') as string;
+		// الخطوة 1: نستخدم superValidate للتحقق من البيانات القادمة من النموذج
+		// مقابل مخطط Zod الذي عرفناه. الأمر بهذه البساطة!
+		const form = await superValidate(request, zod(signupSchema));
 
-		if (password.length < 8) {
-			return fail(400, { error: 'يجب أن تتكون كلمة المرور من 8 أحرف على الأقل.' });
+		// الخطوة 2: إذا كانت البيانات غير صالحة (form.valid === false)
+		// فإن superValidate سيعيد النموذج مع رسائل الخطأ تلقائياً. لا حاجة لكتابة أي كود إضافي!
+		if (!form.valid) {
+			return fail(400, { form });
 		}
 
-		if (password !== passwordConfirm) {
-			return fail(400, { error: 'كلمتا المرور غير متطابقتين.' });
-		}
-
+		// الخطوة 3: إذا كانت البيانات صالحة، نحاول إنشاء المستخدم في PocketBase
 		try {
 			await pb.collection('users').create({
-				username,
-				name: username,
-				email,
-				password,
-				passwordConfirm,
+				...form.data,
+				name: form.data.username, // PocketBase يتوقع حقل "name" أيضاً
 				emailVisibility: true
 			});
 		} catch (err: any) {
-			console.error('Full PocketBase Error Object:', JSON.stringify(err, null, 2));
+			// إذا حدث خطأ من PocketBase (مثل اسم مستخدم موجود بالفعل)
+			console.error('PocketBase Error:', err);
 			const validationErrors = err.data?.data;
-			if (validationErrors) {
-				if (
-					validationErrors.username?.code === 'validation_not_unique' ||
-					validationErrors.email?.code === 'validation_not_unique'
-				) {
-					return fail(400, {
-						error: 'اسم المستخدم أو البريد الإلكتروني مسجل بالفعل.'
-					});
-				}
-				// ... (بقية معالجة الأخطاء تبقى كما هي)
-				if (validationErrors.username?.code === 'validation_invalid_username') {
-					return fail(400, {
-						error: 'اسم المستخدم غير صالح. لا يجب أن يحتوي على مسافات أو رموز خاصة.'
-					});
-				}
-				if (validationErrors.passwordConfirm?.code === 'validation_values_not_equal') {
-					return fail(400, { error: 'كلمتا المرور غير متطابقتين.' });
-				}
-				if (validationErrors.email?.code === 'validation_invalid_email') {
-					return fail(400, { error: 'صيغة البريد الإلكتروني غير صحيحة.' });
-				}
-				if (validationErrors.password?.code === 'validation_length_too_short') {
-					return fail(400, { error: 'كلمة المرور قصيرة جدًا.' });
-				}
+
+			// نتعامل مع حالة "البريد الإلكتروني أو اسم المستخدم موجود بالفعل"
+			if (
+				validationErrors?.username?.code === 'validation_not_unique' ||
+				validationErrors?.email?.code === 'validation_not_unique'
+			) {
+				// "سر" Superforms: نضيف الخطأ يدوياً إلى النموذج
+				// ونربطه بالحقل الصحيح (email) ليعرض في المكان المناسب في الواجهة
+				form.errors.email = ['اسم المستخدم أو البريد الإلكتروني مسجل بالفعل.'];
+				return fail(400, { form });
 			}
-			return fail(500, {
-				error: 'فشل إنشاء الحساب. يرجى مراجعة إعدادات قاعدة البيانات (Create Rule).'
-			});
+
+			// لأي خطأ آخر غير متوقع من الخادم
+			form.errors._errors = ['حدث خطأ ما أثناء إنشاء الحساب. يرجى المحاولة مرة أخرى.'];
+			return fail(500, { form });
 		}
 
-		// --- بداية التحسين: تسجيل الدخول التلقائي ---
+		// --- التحسين الذي تحدثنا عنه: تسجيل الدخول التلقائي ---
 		try {
-			// نحاول تسجيل دخول المستخدم الجديد بنفس البيانات التي أدخلها
-			await pb.collection('users').authWithPassword(email, password);
-
-			// إذا نجح، نقوم بتعيين الكوكيز تمامًا كما نفعل في صفحة تسجيل الدخول
+			await pb.collection('users').authWithPassword(form.data.email, form.data.password);
 			cookies.set('pb_auth', pb.authStore.exportToCookie(), { path: '/' });
 		} catch (authError) {
 			console.error('Auto-login failed after signup:', authError);
-			// إذا فشل تسجيل الدخول لسبب غير متوقع، نوجهه لصفحة الدخول كخطة بديلة
+			// كخطة بديلة، نوجهه لصفحة الدخول
 			throw redirect(303, '/login?registered=true');
 		}
 
-		// نوجه المستخدم إلى صفحته الشخصية مباشرة بدلاً من صفحة الدخول
+		// نوجه المستخدم إلى صفحته الشخصية مباشرة
 		throw redirect(303, '/profile');
-		// --- نهاية التحسين ---
 	}
 };
