@@ -1,53 +1,62 @@
 <script lang="ts">
 	import { onMount, createEventDispatcher } from 'svelte';
-	import type { Chapter } from '$lib/types'; // ✨ استيراد النوع المخصص من ملف الأنواع
+	import type { EnrichedChapter, Manga } from '$lib/types';
 
-	// تعريف البيانات باستخدام الأنواع المحددة
-	export let manga: any; // يمكن أيضاً إنشاء نوع خاص بالمانجا
-	export let initialChapters: Chapter[]; // ✨ استخدام النوع المخصص
+	export let manga: Manga;
+	// ✨ السر رقم 3: المكون الآن يستقبل مصفوفة الفصول الكاملة ويتفاعل معها
+	export let chapters: EnrichedChapter[];
 	export let totalPages: number;
-	export let readChapterIds: string[];
-	export let lastReadChapter: Chapter | null; // ✨ استخدام النوع المخصص
+	export let lastReadChapterId: string | null;
 
 	const dispatch = createEventDispatcher();
 
-	// حالات محلية للمكون مع تحديد الأنواع
-	let chapters: Chapter[] = initialChapters; // ✨ استخدام النوع المخصص
 	let searchTerm = '';
 	let sortOrder: 'asc' | 'desc' = 'asc';
-	let filteredChapters: Chapter[] = []; // ✨ استخدام النوع المخصص
+	// ✨ ميزة جديدة: حالة فلتر القراءة
+	let readFilter: 'all' | 'read' | 'unread' = 'all';
+
+	let filteredChapters: EnrichedChapter[] = [];
 	let endOfPage: HTMLElement;
 	let isLoadingMore = false;
 	let currentPage = 1;
 
-	// تحديث الفصول عند تغير البيانات الأولية
-	$: chapters = initialChapters;
-
-	// فلترة وفرز الفصول
+	// $: تفاعلية Svelte الخارقة
 	$: {
 		let tempChapters = [...chapters];
+
+		// 1. تطبيق فلتر القراءة أولاً
+		if (readFilter === 'read') {
+			tempChapters = tempChapters.filter((c) => c.isRead);
+		} else if (readFilter === 'unread') {
+			tempChapters = tempChapters.filter((c) => !c.isRead);
+		}
+
+		// 2. تطبيق فلتر البحث
+		if (searchTerm) {
+			tempChapters = tempChapters.filter((c) => c.chapter_number.toString().includes(searchTerm));
+		}
+
+		// 3. تطبيق الترتيب أخيراً
 		if (sortOrder === 'desc') {
+			// reverse() يغير المصفوفة الأصلية، لذا نعمل على نسخة
 			tempChapters.reverse();
 		}
-		if (searchTerm) {
-			filteredChapters = tempChapters.filter((c) =>
-				c.chapter_number.toString().includes(searchTerm)
-			);
-		} else {
-			filteredChapters = tempChapters;
-		}
+
+		filteredChapters = tempChapters;
 	}
 
-	// مراقبة الوصول لنهاية الصفحة
+	// هذه الدالة ستبقى مهمتها إعلام الأب بأننا وصلنا للنهاية
 	onMount(() => {
 		const observer = new IntersectionObserver(
 			(entries) => {
 				if (entries[0].isIntersecting && currentPage < totalPages && !isLoadingMore) {
 					isLoadingMore = true;
-					dispatch('loadMore', { page: currentPage + 1 });
+					// نزيد رقم الصفحة محلياً ونرسله للأب ليجلب البيانات
+					currentPage++;
+					dispatch('loadMore', { page: currentPage });
 				}
 			},
-			{ rootMargin: '200px' }
+			{ rootMargin: '200px' } // ابدأ التحميل قبل 200 بكسل من الوصول للنهاية
 		);
 
 		if (endOfPage) observer.observe(endOfPage);
@@ -56,83 +65,98 @@
 		};
 	});
 
-	// دالة عامة لتحديث الحالة عند تحميل المزيد من الفصول
-	// ✨ استخدام النوع المخصص في البارامترات
-	export function chaptersLoaded(newChapters: Chapter[], newPage: number) {
-		chapters = [...chapters, ...newChapters];
-		currentPage = newPage;
+	// ✨ السر رقم 3: لم نعد بحاجة لدالة `chaptersLoaded`!
+	// بدلاً من ذلك، نُعلم الأب أن عملية التحميل انتهت ليقوم هو بتحديث البيانات
+	export function loadFinished() {
 		isLoadingMore = false;
 	}
 </script>
 
 <main class="container mx-auto px-4 py-12" dir="rtl">
-	<div class="mb-6 flex flex-col items-center justify-between gap-4 md:flex-row">
-		<h2 class="text-3xl font-bold text-orange-500">قائمة الفصول</h2>
+	<div class="mb-6 flex flex-col gap-4">
+		<div class="flex flex-col items-center justify-between gap-4 md:flex-row">
+			<h2 class="text-3xl font-bold text-orange-500">
+				قائمة الفصول ({manga.total_chapters || chapters.length})
+			</h2>
 
-		<div class="flex w-full items-center gap-2 md:w-auto">
-			<input
-				type="search"
-				bind:value={searchTerm}
-				placeholder="ابحث عن فصل..."
-				class="w-full rounded-lg border-2 border-gray-700 bg-gray-800 px-4 py-2 text-white placeholder-gray-500 transition focus:border-orange-500 focus:ring-0 focus:outline-none"
-			/>
+			<div class="flex w-full items-center gap-2 md:w-auto">
+				<input
+					type="search"
+					bind:value={searchTerm}
+					placeholder="ابحث عن فصل..."
+					class="w-full rounded-lg border-2 border-gray-700 bg-gray-800 px-4 py-2 text-white placeholder-gray-500 transition focus:border-orange-500 focus:ring-0 focus:outline-none"
+				/>
+				<button
+					on:click={() => (sortOrder = sortOrder === 'asc' ? 'desc' : 'asc')}
+					class="flex-shrink-0 rounded-lg bg-gray-700 p-2 text-white transition hover:bg-orange-600"
+					aria-label="تغيير ترتيب الفصول"
+				>
+					{#if sortOrder === 'asc'}
+						<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+							><path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"
+							></path></svg
+						>
+					{:else}
+						<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+							><path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M3 4h13M3 8h9m-9 4h6m4 0l4 4m0 0l-4 4m4-4V4"
+							></path></svg
+						>
+					{/if}
+				</button>
+			</div>
+		</div>
+
+		<div class="flex justify-center gap-2 rounded-lg bg-gray-800 p-1">
 			<button
-				on:click={() => (sortOrder = sortOrder === 'asc' ? 'desc' : 'asc')}
-				class="flex-shrink-0 rounded-lg bg-gray-700 p-2 text-white transition hover:bg-orange-600"
-				aria-label="تغيير ترتيب الفصول"
+				class="flex-1 rounded-md p-2 text-sm transition {readFilter === 'all'
+					? 'bg-orange-600 font-bold'
+					: 'hover:bg-gray-700'}"
+				on:click={() => (readFilter = 'all')}>الكل</button
 			>
-				{#if sortOrder === 'asc'}
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						width="24"
-						height="24"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"
-						></polyline></svg
-					>
-				{:else}
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						width="24"
-						height="24"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"
-						></polyline></svg
-					>
-				{/if}
-			</button>
+			<button
+				class="flex-1 rounded-md p-2 text-sm transition {readFilter === 'read'
+					? 'bg-orange-600 font-bold'
+					: 'hover:bg-gray-700'}"
+				on:click={() => (readFilter = 'read')}>المقروءة</button
+			>
+			<button
+				class="flex-1 rounded-md p-2 text-sm transition {readFilter === 'unread'
+					? 'bg-orange-600 font-bold'
+					: 'hover:bg-gray-700'}"
+				on:click={() => (readFilter = 'unread')}>غير المقروءة</button
+			>
 		</div>
 	</div>
 
 	<div class="rounded-lg bg-gray-800 shadow-lg">
 		<ul class="divide-y divide-gray-700">
 			{#each filteredChapters as chapter (chapter.id)}
-				<li class={lastReadChapter?.id === chapter.id ? 'bg-blue-900/30' : ''}>
+				<li class={lastReadChapterId === chapter.id ? 'bg-blue-900/30' : ''}>
 					<a
 						href="/manga/{manga.slug}/{chapter.chapter_number}"
 						class="flex items-center justify-between p-4 transition-colors duration-200 hover:bg-gray-700/50"
 					>
-						<div class="flex items-center gap-x-2 space-x-3 rtl:space-x-reverse">
-							<span class="text-xl font-semibold">الفصل {chapter.chapter_number}</span>
-							{#if readChapterIds.includes(chapter.id)}
-								<span class="rounded-full bg-blue-500 px-2 py-1 text-xs text-white">مقروء</span>
+						<div class="flex items-center gap-x-3">
+							<span class="text-lg font-semibold">الفصل {chapter.chapter_number}</span>
+							{#if chapter.isRead}
+								<span class="rounded-full bg-blue-500 px-2 py-0.5 text-xs text-white">مقروء</span>
 							{/if}
-							{#if lastReadChapter?.id === chapter.id}
-								<span class="rounded-full bg-green-500 px-2 py-1 text-xs text-white">آخر قراءة</span
+							{#if lastReadChapterId === chapter.id}
+								<span class="rounded-full bg-green-500 px-2 py-0.5 text-xs text-white"
+									>آخر قراءة</span
 								>
 							{/if}
 						</div>
-						<span class="rounded-full bg-orange-500 px-3 py-1 text-sm font-bold text-white"
+						<span
+							class="hidden rounded-full bg-orange-500 px-3 py-1 text-sm font-bold text-white sm:inline-block"
 							>اقرأ الآن</span
 						>
 					</a>
@@ -152,6 +176,6 @@
 			<div class="p-4 text-center text-gray-400">جاري تحميل المزيد...</div>
 		{/if}
 
-		<div bind:this={endOfPage}></div>
+		<div bind:this={endOfPage} class="h-1"></div>
 	</div>
 </main>

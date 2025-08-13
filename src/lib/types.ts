@@ -1,3 +1,14 @@
+// src/lib/types.ts
+
+// ✨ السر رقم 4: إنشاء نوع عام احترافي يطابق استجابة PocketBase للقوائم
+export interface PocketBaseListResult<T> {
+	page: number;
+	perPage: number;
+	totalPages: number;
+	totalItems: number;
+	items: T[];
+}
+
 export interface Chapter {
 	id: string;
 	collectionId: string;
@@ -6,7 +17,13 @@ export interface Chapter {
 	updated: string;
 	chapter_number: number;
 	manga: string;
-	// أضف أي حقول أخرى لديك في جدول الفصول
+	// يمكن إضافة حقول أخرى مثل عنوان الفصل إن وجد
+	// title?: string;
+}
+
+// ✨ نوع جديد لإثراء بيانات الفصل بمعلومات إضافية نحتاجها في الواجهة
+export interface EnrichedChapter extends Chapter {
+	isRead: boolean;
 }
 
 export interface Manga {
@@ -19,14 +36,30 @@ export interface Manga {
 	slug: string;
 	description: string;
 	author: string;
-	status: 'مستمرة' | 'مكتملة' | 'متوقفة'; // يمكن تحديد الحالات الممكنة
+	status: 'مستمرة' | 'مكتملة' | 'متوقفة';
 	cover_image: string;
 
 	// هذا حقل نضيفه لاحقاً في الكود، لذلك نجعله اختيارياً
 	cover_image_url?: string;
 
-	// هذا حقل يأتي من خلال expand في Pocketbase
+	// ✨ إثراء النوع بمعلومات إضافية مفيدة
+	total_chapters?: number;
+}
+
+// ✨ نوع جديد يمثل بيانات سجل القراءة لتسهيل التعامل معه
+export interface ReadHistoryRecord {
+	id: string;
+	user: string;
+	manga: string;
+	chapter: string; // هذا هو ID الفصل
+	last_page_read: number;
+	updated: string;
 	expand?: {
-		'chapters(manga)'?: Chapter[];
+		chapter: Chapter;
 	};
+}
+
+// نوع يمثل الفصل الأخير الذي تمت قراءته مع تفاصيله
+export interface LastReadChapterInfo extends Chapter {
+	last_page_read: number;
 }

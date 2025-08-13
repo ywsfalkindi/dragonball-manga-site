@@ -1,62 +1,75 @@
 <script lang="ts">
 	import type { PageData, ActionData } from './$types';
-	import { page } from '$app/stores';
-	import type { Chapter } from '$lib/types'; // للتأكد من أننا نستخدم الأنواع الصحيحة
-
-	// ✨ استيراد المكونات الجديدة
+	import { invalidateAll } from '$app/navigation'; // لاستخدامه في المستقبل إذا أردت تحديث كل البيانات
 	import MangaHeader from '$lib/components/MangaHeader.svelte';
 	import ChapterList from '$lib/components/ChapterList.svelte';
 	import Toast from '$lib/components/Toast.svelte';
+	import type { Chapter, EnrichedChapter, PocketBaseListResult } from '$lib/types';
 
 	export let data: PageData;
 	export let form: ActionData;
 
-	// ✨ استخدام التفاعلية الكاملة لجعل الواجهة تتحدث تلقائياً
-	$: ({ manga, isFavorited, chaptersResult, readChapterIds, lastReadChapter, user } = data);
+	// $: التفاعلية تجعل الواجهة تتحدث تلقائياً كلما تغيرت `data`
+	$: ({ manga, isFavorited, readCount, lastReadChapter, firstUnreadChapter, user } = data);
 
-	// متغير للتحكم في حالة انتظار زر المفضلة
-	let isSubmitting = false;
+	// ✨ السر رقم 3: إدارة قائمة الفصول الكاملة هنا في المكون الأب
+	// نقوم بإثراء الفصول الأولية بمعلومات القراءة
+	let chapters: EnrichedChapter[] = data.chaptersResult.items.map((c) => ({
+		...c,
+		isRead: data.readChapterIds.includes(c.id)
+	}));
+	let totalPages = data.chaptersResult.totalPages;
 
-	// متغيرات خاصة برسالة التنبيه (Toast)
+	let isTogglingFavorite = false; // متغير لحالة انتظار زر المفضلة
 	let showToast = false;
 	let toastMessage = '';
 	let toastType: 'success' | 'error' = 'success';
-
-	// متغير للوصول إلى مكون قائمة الفصول برمجياً
 	let chapterListComponent: ChapterList;
 
-	// ✨ مراقبة نتيجة الـ form لإظهار رسالة التنبيه
+	// مراقبة نتيجة الـ form لإظهار رسالة التنبيه
 	$: if (form?.message) {
 		toastMessage = form.message;
 		toastType = form.success ? 'success' : 'error';
 		showToast = true;
 		setTimeout(() => (showToast = false), 3000);
-		// إعادة تعيين الفورم لتجنب ظهوره مرة أخرى عند التنقل
-		form = null;
+		// في حالة فشل تحديث المفضلة، نعكس التغيير المتفائل الذي قمنا به
+		if (form.success === false) {
+			isFavorited = !isFavorited;
+		}
+		form = null; // إعادة تعيين الفورم لتجنب ظهوره مرة أخرى
 	}
 
-	// ✨ دالة تحميل المزيد من الفصول، سيتم استدعاؤها من مكون ChapterList
+	// ✨ السر رقم 2: الدالة الجديدة والمحسّنة لتحميل المزيد من الفصول
 	async function handleLoadMore(event: CustomEvent<{ page: number }>) {
 		const nextPage = event.detail.page;
-		const url = new URL($page.url);
-		url.searchParams.set('page', nextPage.toString());
+		// بناء الرابط لنقطة النهاية المخصصة
+		const url = `/api/manga/${manga.slug}/chapters?page=${nextPage.toString()}`;
 
 		try {
 			const response = await fetch(url);
-			if (!response.ok) throw new Error('Failed to fetch next page');
-
-			// For a seamless infinite scroll, a dedicated API endpoint is best.
-			// This basic example re-fetches the page data. A better way involves `invalidate`.
-			// Let's assume the basic fetch for now.
-			const nextData = (await response.json()) as PageData;
-			const newChapters = nextData.chaptersResult.items;
-
-			if (chapterListComponent && newChapters) {
-				// We must cast the type here as well, because JSON does not carry type info.
-				chapterListComponent.chaptersLoaded(newChapters as Chapter[], nextPage);
+			if (!response.ok) {
+				throw new Error(`فشل جلب الفصول: ${response.statusText}`);
 			}
+
+			const newChaptersResult = (await response.json()) as PocketBaseListResult<Chapter>;
+
+			// إثراء الفصول الجديدة بمعلومات القراءة
+			const newEnrichedChapters: EnrichedChapter[] = newChaptersResult.items.map((c) => ({
+				...c,
+				isRead: data.readChapterIds.includes(c.id)
+			}));
+
+			// ✨ السر رقم 3: تحديث مصفوفة الفصول ببساطة، وSvelte سيتكفل بالباقي
+			chapters = [...chapters, ...newEnrichedChapters];
+			totalPages = newChaptersResult.totalPages;
 		} catch (err) {
 			console.error('Could not load more chapters:', err);
+			// يمكنك إظهار رسالة خطأ للمستخدم هنا أيضاً
+		} finally {
+			// إعلام المكون الابن أن التحميل انتهى (سواء نجح أو فشل)
+			if (chapterListComponent) {
+				chapterListComponent.loadFinished();
+			}
 		}
 	}
 </script>
@@ -64,22 +77,41 @@
 <svelte:head>
 	<title>قراءة مانجا {manga.title} - جميع الفصول</title>
 	<meta name="description" content={manga.description} />
+	<meta property="og:title" content={manga.title} />
+	<meta property="og:description" content={manga.description} />
+	<meta property="og:image" content={manga.cover_image_url} />
+	<meta property="og:type" content="books.book" />
 </svelte:head>
 
 {#if showToast}
 	<Toast message={toastMessage} type={toastType} />
 {/if}
 
-<div class="min-h-screen bg-gray-900 font-[Tajawal] text-white">
-	<MangaHeader {manga} {user} {lastReadChapter} {isFavorited} bind:isSubmitting />
+<div class="font-tajawal min-h-screen bg-gray-900 text-white">
+	<MangaHeader
+		{manga}
+		{user}
+		{lastReadChapter}
+		{firstUnreadChapter}
+		{readCount}
+		bind:isFavorited
+		bind:isSubmitting={isTogglingFavorite}
+	/>
 
 	<ChapterList
 		bind:this={chapterListComponent}
 		{manga}
-		initialChapters={chaptersResult.items as Chapter[]}
-		totalPages={chaptersResult.totalPages}
-		readChapterIds={readChapterIds as string[]}
-		{lastReadChapter}
+		{chapters}
+		{totalPages}
+		lastReadChapterId={lastReadChapter?.id || null}
 		on:loadMore={handleLoadMore}
 	/>
 </div>
+
+<style>
+	/* خط جميل للقراءة باللغة العربية */
+	@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800&display=swap');
+	.font-tajawal {
+		font-family: 'Tajawal', sans-serif;
+	}
+</style>
