@@ -1,13 +1,48 @@
 // src/lib/types.ts
 
-// ✨ السر رقم 4: إنشاء نوع عام احترافي يطابق استجابة PocketBase للقوائم
-export interface PocketBaseListResult<T> {
+import type { RecordModel } from 'pocketbase';
+
+// ===============================================================
+// ✨ الأنواع الأساسية والإضافات الجديدة ✨
+// ===============================================================
+
+/**
+ * يمثل النوع الأساسي لأي سجل قادم من PocketBase، لتقليل التكرار.
+ */
+export interface BaseRecord {
+	id: string;
+	collectionId: string;
+	collectionName: string;
+	created: string;
+	updated: string;
+}
+
+/**
+ * يمثل النوع الكامل للمستخدم المسجل دخوله في التطبيق.
+ */
+export interface User extends BaseRecord {
+    username: string;
+    email: string;
+    name: string;
+    avatar: string;
+}
+
+/**
+ * نوع عام يطابق استجابة PocketBase للقوائم التي تدعم الترقيم (Pagination).
+ * تم توحيد الاسم إلى PaginatedResult ليتوافق مع الاستخدام في ملفات server.
+ */
+export interface PaginatedResult<T> {
 	page: number;
 	perPage: number;
 	totalPages: number;
 	totalItems: number;
 	items: T[];
 }
+
+
+// ===============================================================
+// ✨ الأنواع الأصلية من ملفك (بدون حذف) ✨
+// ===============================================================
 
 export interface Chapter {
 	id: string;
@@ -21,7 +56,9 @@ export interface Chapter {
 	// title?: string;
 }
 
-// ✨ نوع جديد لإثراء بيانات الفصل بمعلومات إضافية نحتاجها في الواجهة
+/**
+ * نوع جديد لإثراء بيانات الفصل بمعلومات إضافية نحتاجها في الواجهة.
+ */
 export interface EnrichedChapter extends Chapter {
 	isRead: boolean;
 }
@@ -42,11 +79,13 @@ export interface Manga {
 	// هذا حقل نضيفه لاحقاً في الكود، لذلك نجعله اختيارياً
 	cover_image_url?: string;
 
-	// ✨ إثراء النوع بمعلومات إضافية مفيدة
+	// إثراء النوع بمعلومات إضافية مفيدة
 	total_chapters?: number;
 }
 
-// ✨ نوع جديد يمثل بيانات سجل القراءة لتسهيل التعامل معه
+/**
+ * نوع جديد يمثل بيانات سجل القراءة لتسهيل التعامل معه.
+ */
 export interface ReadHistoryRecord {
 	id: string;
 	user: string;
@@ -61,7 +100,9 @@ export interface ReadHistoryRecord {
 	};
 }
 
-// نوع يمثل الفصل الأخير الذي تمت قراءته مع تفاصيله
+/**
+ * نوع يمثل الفصل الأخير الذي تمت قراءته مع تفاصيله.
+ */
 export interface LastReadChapterInfo extends Chapter {
 	last_page_read: number;
 }
@@ -73,13 +114,17 @@ interface MangaRecord {
 	cover: string;
 }
 
-// تعريف شكل بيانات الفصل الأساسية
+/**
+ * تعريف شكل بيانات الفصل الأساسية.
+ */
 interface ChapterRecord {
 	id: string;
 	chapter_number: number;
 }
 
-// ✨ نوع يمثل بيانات المستخدم الأساسية التي نعرضها مع التعليق
+/**
+ * نوع يمثل بيانات المستخدم الأساسية التي نعرضها مع التعليق.
+ */
 export interface CommentUser {
 	id: string;
 	username: string;
@@ -87,7 +132,9 @@ export interface CommentUser {
 	avatarUrl: string | null;
 }
 
-// ✨ بطاقة التعريف الرسمية للتعليق في تطبيقنا
+/**
+ * بطاقة التعريف الرسمية للتعليق في تطبيقنا.
+ */
 export interface CommentType {
 	id: string;
 	content: string;

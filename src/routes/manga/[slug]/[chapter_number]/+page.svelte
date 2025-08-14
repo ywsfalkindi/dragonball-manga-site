@@ -116,13 +116,6 @@
 		}
 	}
 
-	function onImageError(event: Event) {
-		const img = event.target as HTMLImageElement;
-		img.src = '/image_error.png';
-		img.style.width = '300px';
-		img.style.opacity = '0.5';
-	}
-
 	function hideUI() {
 		if (showSettings || showThumbnails) return;
 		uiVisible = false;
@@ -644,7 +637,7 @@
 							alt="صفحة {i + 1}"
 							class="h-auto w-full"
 							loading="lazy"
-							on:error={onImageError}
+							
 						/>
 						<div
 							class="absolute inset-0 flex items-center justify-center bg-black/50 font-bold text-white opacity-0 transition-opacity group-hover:opacity-100"
@@ -676,7 +669,7 @@
 						class:fit-height={$imageFitMode === 'fit-height'}
 						class:original-size={$imageFitMode === 'original'}
 						loading="lazy"
-						on:error={onImageError}
+						
 					/>
 				{/each}
 			{:else}
@@ -698,7 +691,7 @@
 								$imageFitMode !== 'fit-height'}
 							class:fit-height={$imageFitMode === 'fit-height'}
 							class:original-size={$imageFitMode === 'original'}
-							on:error={onImageError}
+							
 						/>
 						{#if $pageDisplayMode === 'double' && pages[currentPageIndex + 1]}
 							<img
@@ -708,7 +701,7 @@
 								class:fit-width-horizontal-double={$imageFitMode !== 'fit-height'}
 								class:fit-height={$imageFitMode === 'fit-height'}
 								class:original-size={$imageFitMode === 'original'}
-								on:error={onImageError}
+								
 							/>
 						{/if}
 					</div>
