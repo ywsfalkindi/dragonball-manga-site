@@ -1,8 +1,9 @@
 <script lang="ts">
-	import type { RecordModel } from 'pocketbase';
 	import { enhance } from '$app/forms';
+	import type { RecordModel } from 'pocketbase';
+	import type { CommentType } from '$lib/types';
 
-	export let comment: RecordModel;
+	export let comment: CommentType;
 	export let user: RecordModel | null;
 
 	let showReplyForm = false;
@@ -20,8 +21,8 @@
 			<div
 				class="flex h-12 w-12 items-center justify-center rounded-full bg-gray-700 font-bold text-white"
 			>
-				{#if comment.expand?.user}
-					{(comment.expand.user.username || '?').charAt(0).toUpperCase()}
+				{#if comment.user}
+					{(comment.user.username || '?').charAt(0).toUpperCase()}
 				{:else}
 					؟
 				{/if}
@@ -40,8 +41,11 @@
 			<form method="POST" action="?/toggleLike" use:enhance>
 				<input type="hidden" name="commentId" value={comment.id} />
 				<button type="submit" class="flex items-center gap-1 hover:text-white">
-					<span>{comment.expand?.likes?.length || 0}</span>
-					<span class={comment.likes?.includes(user?.id) ? 'text-red-500' : ''}>❤️</span>
+					<span>{comment.likes.length || 0}</span>
+					<span
+						class={user && user.id && comment.likes.includes(user.id) ? 'text-red-500' : ''}
+						>❤️</span
+					>
 				</button>
 			</form>
 

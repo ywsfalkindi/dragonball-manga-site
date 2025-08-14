@@ -78,3 +78,22 @@ interface ChapterRecord {
 	id: string;
 	chapter_number: number;
 }
+
+// ✨ نوع يمثل بيانات المستخدم الأساسية التي نعرضها مع التعليق
+export interface CommentUser {
+	id: string;
+	username: string;
+	name: string;
+	avatarUrl: string | null;
+}
+
+// ✨ بطاقة التعريف الرسمية للتعليق في تطبيقنا
+export interface CommentType {
+	id: string;
+	content: string;
+	created: string;
+	parentComment: string | null;
+	likes: string[]; // قائمة بمعرفات المستخدمين الذين أعجبوا بالتعليق
+	user: CommentUser | null; // بيانات ناشر التعليق
+	replies: CommentType[]; // قائمة الردود، وهي أيضاً من نوع CommentType
+}

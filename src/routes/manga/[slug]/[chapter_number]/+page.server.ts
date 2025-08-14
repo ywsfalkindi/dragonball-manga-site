@@ -43,18 +43,18 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 			lastPageRead = pageFromUrl;
 		}
 
-		// --- بداية التعديل ---
+		// --- بداية التحسينات (ترقيم صفحات التعليقات) ---
 
-		// 1. جلب كل التعليقات والردود دفعة واحدة
-		const allCommentsRaw = await pb.collection('comments').getFullList({
-			filter: `chapter = "${chapter.id}"`,
+		const COMMENTS_PER_PAGE = 20; // نعرض 20 تعليقاً في كل مرة
+
+		const commentsResult = await pb.collection('comments').getList(1, COMMENTS_PER_PAGE, {
+			filter: `chapter = "${chapter.id}" && parentComment = null`, // نجلب فقط التعليقات الرئيسية
 			sort: '-created',
 			expand: 'user,likes'
 		});
 
-		// 2. تحويل سجلات PocketBase إلى كائنات JavaScript بسيطة ونظيفة
-		const allComments = allCommentsRaw.map((c) => {
-			// تشكيل كائن المستخدم بشكل آمن
+		// الآن نقوم بمعالجة "صفحة" التعليقات التي جلبناها فقط
+		const topLevelComments = commentsResult.items.map((c) => {
 			const userObject = c.expand?.user
 				? {
 						id: c.expand.user.id,
@@ -66,7 +66,6 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 					}
 				: null;
 
-			// تشكيل الكائن النهائي للتعليق
 			return {
 				id: c.id,
 				content: c.content,
@@ -74,37 +73,11 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 				parentComment: c.parentComment || null,
 				likes: c.expand?.likes?.map((like: any) => like.id) || [],
 				user: userObject,
-				replies: [] as any[] // سيتم ملؤه لاحقًا
+				replies: [] // الردود ستكون فارغة مبدئياً وسنتعامل معها لاحقاً
 			};
 		});
 
-		// 3. بناء هيكل الشجرة للتعليقات والردود
-		const commentsById = new Map();
-		const topLevelComments: any[] = [];
-
-		allComments.forEach((c) => {
-			commentsById.set(c.id, c);
-		});
-
-		allComments.forEach((c) => {
-			if (c.parentComment && commentsById.has(c.parentComment)) {
-				commentsById.get(c.parentComment).replies.push(c);
-			} else {
-				topLevelComments.push(c);
-			}
-		});
-
-		// 4. فرز الردود داخل كل تعليق حسب تاريخ الإنشاء (الأقدم أولاً)
-		topLevelComments.forEach((c) => {
-			if (c.replies.length > 0) {
-				c.replies.sort(
-					(a: { created: string | number | Date }, b: { created: string | number | Date }) =>
-						new Date(a.created).getTime() - new Date(b.created).getTime()
-				);
-			}
-		});
-
-		// --- نهاية التعديل ---
+		// --- نهاية التحسينات ---
 
 		const [pages, nextChapter] = await Promise.all([
 			pb.collection('pages').getFullList({
@@ -128,7 +101,8 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 			manga,
 			chapter,
 			pages,
-			comments: topLevelComments, // استخدام المتغير الجديد
+			comments: topLevelComments, // ✅ نرسل أول دفعة من التعليقات
+			commentsTotalPages: commentsResult.totalPages, // ✅ نرسل العدد الإجمالي للصفحات
 			nextChapterExists: !!nextChapter,
 			lastPageRead
 		};
@@ -139,6 +113,7 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 };
 
 export const actions: Actions = {
+	// ... (جزء الـ actions يبقى كما هو بدون تغيير) ...
 	addComment: async ({ locals, request, params }) => {
 		if (!locals.user) {
 			throw redirect(303, '/login');

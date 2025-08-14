@@ -18,7 +18,7 @@
 	export let data: PageData;
 	export let form: ActionData;
 
-	$: ({ user, manga, chapter, pages, comments, nextChapterExists, lastPageRead } = data);
+	$: ({ user, manga, chapter, pages, comments, nextChapterExists, lastPageRead, commentsTotalPages } = data);
 	$: currentChapter = chapter ? Number(chapter.chapter_number) : 0;
 
 	$: currentPageIndex = Math.max(0, Math.min((lastPageRead || 1) - 1, pages.length - 1));
@@ -32,6 +32,8 @@
 	let inactivityTimer: number | NodeJS.Timeout;
 	let updateTimeout: number | NodeJS.Timeout;
 	let newCommentContent = '';
+	let currentCommentPage = 1;
+    let isLoadingMoreComments = false;
 
 	const handleAddComment: SubmitFunction = () => {
 		return async ({ result }) => {
@@ -46,6 +48,35 @@
 			}
 		};
 	};
+
+	async function loadMoreComments() {
+    if (isLoadingMoreComments || currentCommentPage >= commentsTotalPages) {
+        // لا تفعل شيئاً إذا كنا نحمل بالفعل، أو إذا وصلنا إلى النهاية
+        return;
+    }
+
+    isLoadingMoreComments = true;
+    currentCommentPage++; // ننتقل للصفحة التالية
+
+    try {
+        const response = await fetch(`/api/comments/${chapter.id}?page=${currentCommentPage}`);
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+
+        const newData = await response.json();
+
+        // نضيف التعليقات الجديدة إلى نهاية القائمة الحالية
+        comments = [...comments, ...newData.comments];
+
+    } catch (error) {
+        console.error("Failed to load more comments:", error);
+        // إذا فشل الطلب، نرجع رقم الصفحة كما كان
+        currentCommentPage--;
+    } finally {
+        isLoadingMoreComments = false;
+    }
+}
 
 	async function updateProgress(pageIndex: number) {
 		if (!user) return;
@@ -782,6 +813,27 @@
 				<p class="text-center text-gray-400">لا توجد تعليقات بعد. كن أول من يعلق!</p>
 			{/each}
 		</div>
+
+        {#if comments.length > 0}
+    <div class="mt-8 text-center">
+        {#if currentCommentPage < commentsTotalPages}
+            <button
+                on:click={loadMoreComments}
+                disabled={isLoadingMoreComments}
+                class="rounded-lg bg-gray-700 px-6 py-2 font-bold text-white transition hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+                {#if isLoadingMoreComments}
+                    جارٍ التحميل...
+                {:else}
+                    تحميل المزيد من التعليقات
+                {/if}
+            </button>
+        {:else}
+            <p class="text-gray-500" dir="rtl">وصلت إلى نهاية التعليقات</p>
+        {/if}
+    </div>
+{/if}
+
 	</section>
 </div>
 
