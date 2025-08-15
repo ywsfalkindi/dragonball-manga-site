@@ -3,38 +3,89 @@
 	import { goto } from '$app/navigation';
 	import { navigating } from '$app/stores';
 	import { fade } from 'svelte/transition';
-	import QuizCard from '$lib/components/QuizCard.svelte'; // 1. استيراد المكون الجديد
+	import QuizCard from '$lib/components/QuizCard.svelte';
+	// سنضيف هذا المكون الجديد بعد قليل
+	import QuizCardSkeleton from '$lib/components/QuizCardSkeleton.svelte';
 
 	export let data: PageData;
 
-	// متغير لتتبع ما إذا كنا نقوم بتحميل المزيد من العناصر
+	// --- 1. متغيرات محلية لإدارة الحالة بشكل تفاعلي ---
+	let quizzes = data.quizzes;
+	let currentPage = data.currentPage;
+	let totalPages = data.totalPages;
 	let loadingMore = false;
+	// لتتبع حالة التحميل الأولية للصفحة
+	let initialLoading = true;
 
-	// دالة للذهاب إلى الصفحة التالية
+	// --- 2. دالة Debounce لتأخير البحث التلقائي ---
+	function debounce<T extends (...args: any[]) => any>(func: T, timeout = 500) {
+		let timer: ReturnType<typeof setTimeout>;
+		return (...args: Parameters<T>) => {
+			clearTimeout(timer);
+			timer = setTimeout(() => {
+				func(...args);
+			}, timeout);
+		};
+	}
+
+	// --- 3. دوال جديدة لتطبيق الفلاتر بذكاء ---
+	function applyFilters(form: HTMLFormElement) {
+		const formData = new FormData(form);
+		formData.delete('page'); // نبدأ دائماً من صفحة 1 عند الفلترة
+		const params = new URLSearchParams(formData as any);
+		goto(`?${params.toString()}`, { keepFocus: true, noScroll: true });
+	}
+
+	// ننشئ نسخة "مُؤخرة" من دالة تطبيق الفلاتر
+	const debouncedApplyFilters = debounce((form) => applyFilters(form));
+
+	function handleFormInput(event: Event) {
+		const form = event.currentTarget as HTMLFormElement;
+		// البحث سيعمل بعد التوقف عن الكتابة بنصف ثانية
+		debouncedApplyFilters(form);
+	}
+    
+    function handleFormChange(event: Event) {
+        const form = event.currentTarget as HTMLFormElement;
+        // الفلترة بالتصنيف والمستوى ستكون فورية
+        applyFilters(form);
+    }
+
+	// --- 4. دالة "تحميل المزيد" الجديدة والمحسنة ---
 	async function loadMore() {
+		if (loadingMore || currentPage >= totalPages) return;
 		loadingMore = true;
-		const nextPage = data.currentPage + 1;
 
-		// نقوم ببناء رابط الصفحة التالية مع الحفاظ على كل الفلاتر الحالية
+		const nextPage = currentPage + 1;
 		const url = new URL(window.location.href);
+		url.pathname = '/api/quizzes'; // نستهدف مسار الـ API الذي أنشأناه
 		url.searchParams.set('page', nextPage.toString());
 
-		// نستخدم goto مع خيار noScroll لمنع الصفحة من القفز للأعلى
-		await goto(url.toString(), { noScroll: true, keepFocus: true });
-		loadingMore = false;
+		try {
+			const response = await fetch(url.toString());
+			const newResult = await response.json();
+
+			if (newResult && newResult.items) {
+				// الأهم: نضيف الاختبارات الجديدة إلى القائمة الحالية ولا نستبدلها
+				quizzes = [...quizzes, ...newResult.items];
+				currentPage = newResult.page;
+			}
+		} catch (err) {
+			console.error('Failed to load more quizzes:', err);
+		} finally {
+			loadingMore = false;
+		}
 	}
 
-	// هذه الدالة ستقوم بتحديث الرابط عند تغيير أي فلتر
-	function applyFilters(event: { currentTarget: any; }) {
-		const form = event.currentTarget;
-		const formData = new FormData(form);
-		// نحذف متغير الصفحة لكي نبدأ من الصفحة الأولى عند كل فلترة جديدة
-		formData.delete('page');
-		const params = new URLSearchParams(formData as any);
-		goto(`?${params.toString()}`, { keepFocus: true });
+	// --- 5. مراقبة تغيير الفلاتر لإعادة تعيين قائمة الاختبارات ---
+	// هذا السطر السحري يعيد تعيين القائمة عند كل فلترة جديدة من الخادم
+	$: if (data.quizzes) {
+		quizzes = data.quizzes;
+		currentPage = data.currentPage;
+		totalPages = data.totalPages;
+		initialLoading = false; // نوقف حالة التحميل الأولية
 	}
 
-	// دالة لمسح جميع الفلاتر والعودة للوضع الافتراضي
 	function clearFilters() {
 		goto('/quizzes');
 	}
@@ -57,25 +108,24 @@
 			هل تعتقد أنك تعرف كل شيء عن عالم دراغون بول؟ اختبر معلوماتك وأثبت أنك من نخبة المحاربين!
 		</p>
 
-		<form method="GET" on:submit|preventDefault={applyFilters} class="mb-12 rounded-lg bg-gray-800 p-4">
+		<form method="GET" on:submit|preventDefault={(e) => applyFilters(e.currentTarget)} class="mb-12 rounded-lg bg-gray-800 p-4">
 			<div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
 				<div class="md:col-span-2">
 					<label for="search" class="block text-sm font-medium text-gray-300 mb-1">ابحث عن اختبار</label>
 					<input
-						type="search"
-						name="search"
-						id="search"
-						placeholder="مثال: قصة فيجيتا..."
-						value={data.currentSearch}
-						class="w-full appearance-none rounded-lg bg-gray-700 px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
-					/>
+    type="search"
+    name="search"
+    id="search"
+    placeholder="مثال: قصة فيجيتا..."
+    value={data.currentSearch}
+    on:input={handleFormInput}
+    class="w-full appearance-none rounded-lg bg-gray-700 px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+/>
 				</div>
 
 				<div>
 					<label for="category" class="block text-sm font-medium text-gray-300 mb-1">التصنيف</label>
-					<select
-						name="category"
-						id="category"
+					<select name="category" id="category" on:change={handleFormChange} 
 						class="w-full appearance-none rounded-lg bg-gray-700 px-4 py-2 pr-8 text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
 					>
 						<option value="">كل التصنيفات</option>
@@ -111,31 +161,45 @@
 			</div>
 		</form>
 
-		{#if data.quizzes.length > 0}
-			<div class="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-				{#each data.quizzes as quiz (quiz.id)}
-					<div in:fade={{ duration: 300, delay: 100 }}>
-						<QuizCard {quiz} />
-					</div>
-				{/each}
+		{#if initialLoading || ($navigating && quizzes.length === 0)}
+	<div class="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+		{#each Array(8) as _}
+			<QuizCardSkeleton />
+		{/each}
+	</div>
+{:else if quizzes.length > 0}
+	<div class="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+		{#each quizzes as quiz (quiz.id)}
+			<div in:fade={{ duration: 300, delay: 100 }}>
+				<QuizCard {quiz} />
 			</div>
+		{/each}
+	</div>
 
-			{#if data.currentPage < data.totalPages}
-				<div class="mt-12 text-center">
-					<button
-						on:click={loadMore}
-						disabled={loadingMore}
-						class="rounded-lg bg-orange-700 px-8 py-3 font-bold text-white transition-transform hover:scale-105 disabled:cursor-not-allowed disabled:bg-gray-600"
-					>
-						{loadingMore ? 'جاري التحميل...' : 'تحميل المزيد من الاختبارات'}
-					</button>
-				</div>
-			{/if}
-		{:else}
-			<div class="rounded-lg bg-gray-800 py-24 text-center">
-				<p class="text-2xl text-gray-400">لا توجد اختبارات تطابق خياراتك الحالية.</p>
-				<p class="mt-4 text-gray-500">حاول تغيير فلاتر البحث أو اضغط على زر المسح للبدء من جديد!</p>
-			</div>
-		{/if}
+	{#if currentPage < totalPages}
+		<div class="mt-12 text-center">
+			<button
+				on:click={loadMore}
+				disabled={loadingMore}
+				class="rounded-lg bg-orange-700 px-8 py-3 font-bold text-white transition-transform hover:scale-105 disabled:cursor-not-allowed disabled:bg-gray-600"
+			>
+				{loadingMore ? 'جاري التحميل...' : 'تحميل المزيد من الاختبارات'}
+			</button>
+		</div>
+	{/if}
+
+	{#if loadingMore}
+		<div class="mt-8 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+			{#each Array(4) as _}
+				<QuizCardSkeleton />
+			{/each}
+		</div>
+	{/if}
+{:else}
+	<div class="rounded-lg bg-gray-800 py-24 text-center">
+		<p class="text-2xl text-gray-400">لا توجد اختبارات تطابق خياراتك الحالية.</p>
+		<p class="mt-4 text-gray-500">حاول تغيير فلاتر البحث أو اضغط على زر المسح للبدء من جديد!</p>
+	</div>
+{/if}
 	</div>
 </div>
