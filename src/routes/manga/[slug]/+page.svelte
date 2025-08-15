@@ -4,7 +4,7 @@
 	import MangaHeader from '$lib/components/MangaHeader.svelte';
 	import ChapterList from '$lib/components/ChapterList.svelte';
 	import Toast from '$lib/components/Toast.svelte';
-	import type { Chapter, EnrichedChapter, PocketBaseListResult } from '$lib/types';
+	import type { Chapter, EnrichedChapter, PaginatedResult } from '$lib/types';
 
 	export let data: PageData;
 	export let form: ActionData;
@@ -14,7 +14,7 @@
 
 	// ✨ السر رقم 3: إدارة قائمة الفصول الكاملة هنا في المكون الأب
 	// نقوم بإثراء الفصول الأولية بمعلومات القراءة
-	let chapters: EnrichedChapter[] = data.chaptersResult.items.map((c) => ({
+	let chapters: EnrichedChapter[] = data.chaptersResult.items.map((c: Chapter) => ({
 		...c,
 		isRead: data.readChapterIds.includes(c.id)
 	}));
@@ -51,7 +51,7 @@
 				throw new Error(`فشل جلب الفصول: ${response.statusText}`);
 			}
 
-			const newChaptersResult = (await response.json()) as PocketBaseListResult<Chapter>;
+			const newChaptersResult = (await response.json()) as PaginatedResult<Chapter>;
 
 			// إثراء الفصول الجديدة بمعلومات القراءة
 			const newEnrichedChapters: EnrichedChapter[] = newChaptersResult.items.map((c) => ({
