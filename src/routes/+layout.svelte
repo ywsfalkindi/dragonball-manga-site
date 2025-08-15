@@ -1,29 +1,32 @@
 <script lang="ts">
-	import type { LayoutData } from './$types';
-	import '../app.css';
-	import { navigating, page } from '$app/stores';
-	import DragonBall from '$lib/components/DragonBall.svelte';
-	import { onMount } from 'svelte';
-	import { fly, slide } from 'svelte/transition'; // ✨ تم استيراد دالة slide هنا
+    import type { LayoutData } from './$types';
+    import '../app.css';
+    import { navigating, page } from '$app/stores';
+    import DragonBall from '$lib/components/DragonBall.svelte';
+    import { onMount } from 'svelte';
+    import { slide } from 'svelte/transition';
+    import { toasts, addToast } from '$lib/stores/toast'; // ✨ استيراد addToast
+    import Toast from '$lib/components/Toast.svelte';
 
-	export let data: LayoutData;
-	let showLogoutToast = false;
-	let isMenuOpen = false;
+    export let data: LayoutData;
 
-	// ✨ بداية الإصلاح: إغلاق القائمة عند التنقل ✨
-	$: if ($navigating) {
-		isMenuOpen = false;
-	}
-	// ✨ نهاية الإصلاح ✨
+    let isMenuOpen = false;
 
-	onMount(() => {
-		if ($page.url.searchParams.get('logout') === 'true') {
-			showLogoutToast = true;
-			setTimeout(() => {
-				showLogoutToast = false;
-			}, 3000);
-		}
-	});
+    $: if ($navigating) {
+        isMenuOpen = false;
+    }
+
+    // ✨ تم تعديل هذا الجزء ليستخدم نظام الإشعارات الجديد
+    onMount(() => {
+        if ($page.url.searchParams.get('logout') === 'true') {
+            addToast('تم تسجيل خروجك بنجاح!', 'success');
+
+            // ننظف الرابط لتجنب ظهور الرسالة مرة أخرى عند تحديث الصفحة
+            const url = new URL(window.location.href);
+            url.searchParams.delete('logout');
+            window.history.replaceState({}, '', url);
+        }
+    });
 </script>
 
 {#if $navigating}
@@ -38,15 +41,12 @@
 	<DragonBall ball_number={data.dragonBall.ball_number} find_token={data.dragonBall.find_token} />
 {/if}
 
-{#if showLogoutToast}
-	<div
-		in:fly={{ y: -20, duration: 300 }}
-		out:fly={{ y: -20, duration: 300 }}
-		class="fixed top-20 right-1/2 z-[9999] translate-x-1/2 rounded-lg bg-green-600 px-6 py-2 text-white shadow-lg"
-	>
-		تم تسجيل خروجك بنجاح!
-	</div>
-{/if}
+<div class="fixed top-5 right-5 z-[100] flex flex-col gap-2">
+    {#each $toasts as toast (toast.id)}
+        <Toast message={toast.message} type={toast.type} />
+    {/each}
+</div>
+
 
 <div class="min-h-screen bg-gray-900 font-[Tajawal] text-white">
 	<nav class="sticky top-0 z-50 bg-gray-800 p-4 text-white shadow-md">

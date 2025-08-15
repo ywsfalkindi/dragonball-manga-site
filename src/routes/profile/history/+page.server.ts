@@ -3,25 +3,20 @@
 import { pb } from '$lib/pocketbase';
 import { redirect, error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import type { PaginatedResult, ReadHistoryRecord } from '$lib/types'; // <-- استيراد الأنواع الجديدة
+import type { PaginatedResult, ReadHistoryRecord } from '$lib/types';
 import type { Actions } from './$types';
-import { ClientResponseError } from 'pocketbase'; 
+import { ClientResponseError } from 'pocketbase';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	if (!locals.user) throw redirect(303, '/login');
 
 	const page = Number(url.searchParams.get('page')) || 1;
 	const perPage = 20;
-	// ✨ 1. احصل على مصطلح البحث من الرابط
 	const searchTerm = url.searchParams.get('q') || '';
 
-	// ✨ 2. قم ببناء فلتر ديناميكي
-	// نبدأ بالفلتر الأساسي الذي يضمن جلب سجلات المستخدم الحالي فقط
 	let filter = `user.id = "${locals.user.id}"`;
 
-	// إذا كان هناك مصطلح بحث، أضفه إلى الفلتر
 	if (searchTerm) {
-		// PocketBase's `~` operator means "like" (يُشبه)
 		filter += ` && manga.title ~ "${searchTerm}"`;
 	}
 
@@ -29,14 +24,15 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		const historyResult: PaginatedResult<ReadHistoryRecord> = await pb
 			.collection('read_history')
 			.getList(page, perPage, {
-				filter: filter, // ✨ 3. استخدم الفلتر الديناميكي هنا
+				filter: filter,
 				sort: '-created',
 				expand: 'manga,chapter'
 			});
 
 		for (const record of historyResult.items) {
 			if (record.expand?.manga?.cover_image) {
-				record.expand.manga.cover_image_url = pb.getFileUrl(
+				// ✨✨ هذا هو السطر الذي تم تحديثه ✨✨
+				record.expand.manga.cover_image_url = pb.files.getURL(
 					record.expand.manga,
 					record.expand.manga.cover_image,
 					{ thumb: '100x150' }
@@ -44,7 +40,6 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			}
 		}
 
-		// ✨ 4. أعد مصطلح البحث إلى الصفحة
 		return {
 			history: historyResult,
 			searchTerm: searchTerm
@@ -56,32 +51,72 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 };
 
 export const actions: Actions = {
-	deleteRecord: async ({ locals, request }) => {
-		if (!locals.user) {
-			throw error(401, 'غير مصرح به');
-		}
+    deleteRecord: async ({ locals, request }) => {
+        if (!locals.user) {
+            throw error(401, 'غير مصرح به');
+        }
 
-		const formData = await request.formData();
-		const recordId = formData.get('id') as string;
+        const formData = await request.formData();
+        const recordId = formData.get('id') as string;
 
-		if (!recordId) {
-			return { success: false, message: 'معرف السجل مفقود.' };
-		}
+        if (!recordId) {
+            return { success: false, message: 'معرف السجل مفقود.' };
+        }
 
-		try {
-			await pb.collection('read_history').delete(recordId);
-			return { success: true };
-		} catch (err) {
-			// ✨ 2. Check if the error is a 404
-			if (err instanceof ClientResponseError && err.status === 404) {
-				// The record was already deleted, which is fine.
-				// We can treat this as a success.
-				return { success: true };
-			}
-			
-			// For any other error, log it and return a failure message
-			console.error('Error deleting history record:', err);
-			return { success: false, message: 'فشل حذف السجل.' };
-		}
-	}
+        try {
+            await pb.collection('read_history').delete(recordId);
+            // رسالة نجاح واضحة
+            return { success: true, message: 'تم حذف السجل بنجاح.' };
+        } catch (err) {
+            if (err instanceof ClientResponseError && err.status === 404) {
+                return { success: true, message: 'السجل محذوف بالفعل.' };
+            }
+
+            console.error('Error deleting history record:', err);
+            return { success: false, message: 'فشل حذف السجل. حاول مرة أخرى.' };
+        }
+    },
+
+    // ✨ جديد: لحذف السجلات المحددة
+    deleteSelected: async ({ locals, request }) => {
+        if (!locals.user) throw error(401, 'غير مصرح به');
+
+        const formData = await request.formData();
+        const idsToDelete = formData.getAll('ids') as string[];
+
+        if (!idsToDelete || idsToDelete.length === 0) {
+            return { success: false, message: 'لم يتم تحديد أي سجلات.' };
+        }
+
+        // حاول حذف كل السجلات المحددة
+        const promises = idsToDelete.map(id => pb.collection('read_history').delete(id, { requestKey: null }));
+
+        try {
+            await Promise.allSettled(promises); // نستخدم allSettled لتجنب إيقاف العملية عند أول خطأ
+            return { success: true, message: `تم حذف ${idsToDelete.length} سجل بنجاح.` };
+        } catch (err) {
+            console.error('Error deleting selected history records:', err);
+            return { success: false, message: 'فشل حذف بعض السجلات المحددة.' };
+        }
+    },
+
+    // ✨ جديد: لمسح كل السجل
+    clearHistory: async ({ locals }) => {
+        if (!locals.user) throw error(401, 'غير مصرح به');
+
+        try {
+            const records = await pb.collection('read_history').getFullList(200, {
+                filter: `user.id = "${locals.user.id}"`,
+                fields: 'id'
+            });
+
+            const deletePromises = records.map(record => pb.collection('read_history').delete(record.id, { requestKey: null }));
+            await Promise.allSettled(deletePromises);
+
+            return { success: true, message: 'تم مسح سجل القراءة بالكامل.' };
+        } catch (err) {
+            console.error('Error clearing history:', err);
+            return { success: false, message: 'فشل مسح سجل القراءة.' };
+        }
+    }
 };
