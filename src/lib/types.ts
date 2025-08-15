@@ -83,6 +83,12 @@ export interface Manga {
 	total_chapters?: number;
 }
 
+export interface EnrichedManga extends Manga {
+	isNew: boolean;
+	isTrending: boolean;
+	chapters_count: number | null; // هذا الحقل يجب أن يكون chapters_count ليتطابق مع الخادم
+}
+
 /**
  * نوع جديد يمثل بيانات سجل القراءة لتسهيل التعامل معه.
  */

@@ -3,15 +3,15 @@
 	import { fly, fade } from 'svelte/transition';
 	import { onMount } from 'svelte';
 	import { cubicOut } from 'svelte/easing';
-
+    import MangaCard from '$lib/components/MangaCard.svelte';
 	export let data: PageData;
 	// استيراد متغيرات الفرز والتصفية
-	const { mangas, sort, status } = data;
+	$: ({ mangas, sort, status } = data);
 
 	let stage = 0;
 	onMount(() => {
 		setTimeout(() => (stage = 1), 100);
-		setTimeout(() => (stage = 2), 2000);
+		setTimeout(() => (stage = 2), 500);
 	});
 </script>
 
@@ -66,66 +66,49 @@
 	<main class="container mx-auto px-4 py-16">
 		<h2 class="mb-6 text-center text-3xl font-bold text-orange-500 md:text-4xl">اختر السلسلة</h2>
 
-		<div class="mb-12 flex flex-wrap items-center justify-center gap-4">
-			<div class="flex items-center gap-2 rounded-lg bg-gray-800 p-1">
-				<a
-					href="?sort=-created&status={status || ''}"
-					class="rounded-md px-4 py-2 text-sm transition-colors {sort === '-created'
-						? 'bg-orange-600'
-						: 'hover:bg-gray-700'}">الأحدث</a
-				>
-				<a
-					href="?sort=title&status={status || ''}"
-					class="rounded-md px-4 py-2 text-sm transition-colors {sort === 'title'
-						? 'bg-orange-600'
-						: 'hover:bg-gray-700'}">أبجدي</a
-				>
-			</div>
-			<div class="relative">
-				<select
-					on:change={(e) => {
-						const newStatus = e.currentTarget.value;
-						window.location.href = `?sort=${sort}&status=${newStatus}`;
-					}}
-					class="appearance-none rounded-lg bg-gray-800 px-4 py-2 pr-8 text-white focus:ring-2 focus:ring-orange-500 focus:outline-none"
-				>
-					<option value="" selected={status === ''}>كل الحالات</option>
-					<option value="ongoing" selected={status === 'ongoing'}>مستمرة</option>
-					<option value="completed" selected={status === 'completed'}>مكتملة</option>
-				</select>
-				<div
-					class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400"
-				>
-					<svg class="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
-						><path
-							d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"
-						/></svg
-					>
-				</div>
-			</div>
-		</div>
+		<form method="GET" class="mb-12 flex flex-wrap items-center justify-center gap-4" aria-label="فرز وتصفية المانجا">
+    <div class="flex items-center gap-2 rounded-lg bg-gray-800 p-1">
+        <button
+            type="submit"
+            name="sort"
+            value="-created"
+            class="rounded-md px-4 py-2 text-sm font-bold transition-colors {sort === '-created' ? 'bg-orange-600' : 'hover:bg-gray-700'}"
+        >
+            الأحدث
+        </button>
+        <button
+            type="submit"
+            name="sort"
+            value="title"
+            class="rounded-md px-4 py-2 text-sm font-bold transition-colors {sort === 'title' ? 'bg-orange-600' : 'hover:bg-gray-700'}"
+        >
+            أبجدي
+        </button>
+    </div>
+    <div class="relative">
+        <select
+            name="status"
+            on:change={(event) => event.currentTarget?.form?.submit()}
+            class="appearance-none rounded-lg border-2 border-transparent bg-gray-800 px-4 py-2 pr-8 font-semibold text-white transition hover:border-gray-600 focus:border-orange-500 focus:outline-none"
+        >
+            <option value="" selected={status === ''}>كل الحالات</option>
+            <option value="مستمرة" selected={status === 'مستمرة'}>مستمرة</option>
+            <option value="مكتملة" selected={status === 'مكتملة'}>مكتملة</option>
+        </select>
+        </div>
+</form>
 
 		{#if mangas.length > 0}
-			<div class="grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-3 md:gap-10">
-				{#each mangas as manga}
-					<a
-						href="/manga/{manga.slug}"
-						class="group transform overflow-hidden rounded-lg bg-gray-800 shadow-xl transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl"
-					>
-						<div class="h-64 w-full overflow-hidden">
-							<img
-								src={manga.cover_image_url}
-								alt="غلاف مانجا {manga.title}"
-								class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-							/>
-						</div>
-						<div class="p-6">
-							<h3 class="mb-2 text-2xl font-bold">{manga.title}</h3>
-							<p class="leading-relaxed text-gray-400">{manga.description}</p>
-						</div>
-					</a>
-				{/each}
-			</div>
+			<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 p-4">
+     {#each mangas as manga (manga.id)}
+        <MangaCard 
+            manga={manga}
+            isNew={manga.isNew}
+            isTrending={manga.isTrending}
+            chapters_count={manga.chapters_count}
+        />
+    {/each}
+</div>
 		{:else}
 			<p class="text-center text-xl text-gray-400">لا توجد مانجا تطابق خيارات البحث الحالية.</p>
 		{/if}
