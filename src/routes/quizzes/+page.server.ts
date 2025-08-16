@@ -45,8 +45,9 @@ export const load: PageServerLoad = async ({ url }) => {
 		});
 		// نستخدم Set لإزالة التكرار والحصول على قيم فريدة
 		const categories = [...new Set(allQuizzesForFilters.map((q) => q.category).filter(Boolean))];
-		const difficulties = [...new Set(allQuizzesForFilters.map((q) => q.difficulty).filter(Boolean))];
-
+		const difficulties = [
+			...new Set(allQuizzesForFilters.map((q) => q.difficulty).filter(Boolean))
+		];
 
 		// --- 5. توليد روابط الصور (كما كان) وإرسال البيانات ---
 		quizzesResult.items.forEach((quiz) => {

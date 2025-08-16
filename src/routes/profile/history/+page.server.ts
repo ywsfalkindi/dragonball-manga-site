@@ -51,72 +51,76 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 };
 
 export const actions: Actions = {
-    deleteRecord: async ({ locals, request }) => {
-        if (!locals.user) {
-            throw error(401, 'غير مصرح به');
-        }
+	deleteRecord: async ({ locals, request }) => {
+		if (!locals.user) {
+			throw error(401, 'غير مصرح به');
+		}
 
-        const formData = await request.formData();
-        const recordId = formData.get('id') as string;
+		const formData = await request.formData();
+		const recordId = formData.get('id') as string;
 
-        if (!recordId) {
-            return { success: false, message: 'معرف السجل مفقود.' };
-        }
+		if (!recordId) {
+			return { success: false, message: 'معرف السجل مفقود.' };
+		}
 
-        try {
-            await pb.collection('read_history').delete(recordId);
-            // رسالة نجاح واضحة
-            return { success: true, message: 'تم حذف السجل بنجاح.' };
-        } catch (err) {
-            if (err instanceof ClientResponseError && err.status === 404) {
-                return { success: true, message: 'السجل محذوف بالفعل.' };
-            }
+		try {
+			await pb.collection('read_history').delete(recordId);
+			// رسالة نجاح واضحة
+			return { success: true, message: 'تم حذف السجل بنجاح.' };
+		} catch (err) {
+			if (err instanceof ClientResponseError && err.status === 404) {
+				return { success: true, message: 'السجل محذوف بالفعل.' };
+			}
 
-            console.error('Error deleting history record:', err);
-            return { success: false, message: 'فشل حذف السجل. حاول مرة أخرى.' };
-        }
-    },
+			console.error('Error deleting history record:', err);
+			return { success: false, message: 'فشل حذف السجل. حاول مرة أخرى.' };
+		}
+	},
 
-    // ✨ جديد: لحذف السجلات المحددة
-    deleteSelected: async ({ locals, request }) => {
-        if (!locals.user) throw error(401, 'غير مصرح به');
+	// ✨ جديد: لحذف السجلات المحددة
+	deleteSelected: async ({ locals, request }) => {
+		if (!locals.user) throw error(401, 'غير مصرح به');
 
-        const formData = await request.formData();
-        const idsToDelete = formData.getAll('ids') as string[];
+		const formData = await request.formData();
+		const idsToDelete = formData.getAll('ids') as string[];
 
-        if (!idsToDelete || idsToDelete.length === 0) {
-            return { success: false, message: 'لم يتم تحديد أي سجلات.' };
-        }
+		if (!idsToDelete || idsToDelete.length === 0) {
+			return { success: false, message: 'لم يتم تحديد أي سجلات.' };
+		}
 
-        // حاول حذف كل السجلات المحددة
-        const promises = idsToDelete.map(id => pb.collection('read_history').delete(id, { requestKey: null }));
+		// حاول حذف كل السجلات المحددة
+		const promises = idsToDelete.map((id) =>
+			pb.collection('read_history').delete(id, { requestKey: null })
+		);
 
-        try {
-            await Promise.allSettled(promises); // نستخدم allSettled لتجنب إيقاف العملية عند أول خطأ
-            return { success: true, message: `تم حذف ${idsToDelete.length} سجل بنجاح.` };
-        } catch (err) {
-            console.error('Error deleting selected history records:', err);
-            return { success: false, message: 'فشل حذف بعض السجلات المحددة.' };
-        }
-    },
+		try {
+			await Promise.allSettled(promises); // نستخدم allSettled لتجنب إيقاف العملية عند أول خطأ
+			return { success: true, message: `تم حذف ${idsToDelete.length} سجل بنجاح.` };
+		} catch (err) {
+			console.error('Error deleting selected history records:', err);
+			return { success: false, message: 'فشل حذف بعض السجلات المحددة.' };
+		}
+	},
 
-    // ✨ جديد: لمسح كل السجل
-    clearHistory: async ({ locals }) => {
-        if (!locals.user) throw error(401, 'غير مصرح به');
+	// ✨ جديد: لمسح كل السجل
+	clearHistory: async ({ locals }) => {
+		if (!locals.user) throw error(401, 'غير مصرح به');
 
-        try {
-            const records = await pb.collection('read_history').getFullList(200, {
-                filter: `user.id = "${locals.user.id}"`,
-                fields: 'id'
-            });
+		try {
+			const records = await pb.collection('read_history').getFullList(200, {
+				filter: `user.id = "${locals.user.id}"`,
+				fields: 'id'
+			});
 
-            const deletePromises = records.map(record => pb.collection('read_history').delete(record.id, { requestKey: null }));
-            await Promise.allSettled(deletePromises);
+			const deletePromises = records.map((record) =>
+				pb.collection('read_history').delete(record.id, { requestKey: null })
+			);
+			await Promise.allSettled(deletePromises);
 
-            return { success: true, message: 'تم مسح سجل القراءة بالكامل.' };
-        } catch (err) {
-            console.error('Error clearing history:', err);
-            return { success: false, message: 'فشل مسح سجل القراءة.' };
-        }
-    }
+			return { success: true, message: 'تم مسح سجل القراءة بالكامل.' };
+		} catch (err) {
+			console.error('Error clearing history:', err);
+			return { success: false, message: 'فشل مسح سجل القراءة.' };
+		}
+	}
 };

@@ -18,7 +18,16 @@
 	export let data: PageData;
 	export let form: ActionData;
 
-	$: ({ user, manga, chapter, pages, comments, nextChapterExists, lastPageRead, commentsTotalPages } = data);
+	$: ({
+		user,
+		manga,
+		chapter,
+		pages,
+		comments,
+		nextChapterExists,
+		lastPageRead,
+		commentsTotalPages
+	} = data);
 	$: currentChapter = chapter ? Number(chapter.chapter_number) : 0;
 
 	$: currentPageIndex = Math.max(0, Math.min((lastPageRead || 1) - 1, pages.length - 1));
@@ -33,7 +42,8 @@
 	let updateTimeout: number | NodeJS.Timeout;
 	let newCommentContent = '';
 	let currentCommentPage = 1;
-    let isLoadingMoreComments = false;
+	let isLoadingMoreComments = false;
+	let showPageDisplayMenu = false;
 
 	const handleAddComment: SubmitFunction = () => {
 		return async ({ result }) => {
@@ -50,33 +60,32 @@
 	};
 
 	async function loadMoreComments() {
-    if (isLoadingMoreComments || currentCommentPage >= commentsTotalPages) {
-        // لا تفعل شيئاً إذا كنا نحمل بالفعل، أو إذا وصلنا إلى النهاية
-        return;
-    }
+		if (isLoadingMoreComments || currentCommentPage >= commentsTotalPages) {
+			// لا تفعل شيئاً إذا كنا نحمل بالفعل، أو إذا وصلنا إلى النهاية
+			return;
+		}
 
-    isLoadingMoreComments = true;
-    currentCommentPage++; // ننتقل للصفحة التالية
+		isLoadingMoreComments = true;
+		currentCommentPage++; // ننتقل للصفحة التالية
 
-    try {
-        const response = await fetch(`/api/comments/${chapter.id}?page=${currentCommentPage}`);
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
+		try {
+			const response = await fetch(`/api/comments/${chapter.id}?page=${currentCommentPage}`);
+			if (!response.ok) {
+				throw new Error('Network response was not ok');
+			}
 
-        const newData = await response.json();
+			const newData = await response.json();
 
-        // نضيف التعليقات الجديدة إلى نهاية القائمة الحالية
-        comments = [...comments, ...newData.comments];
-
-    } catch (error) {
-        console.error("Failed to load more comments:", error);
-        // إذا فشل الطلب، نرجع رقم الصفحة كما كان
-        currentCommentPage--;
-    } finally {
-        isLoadingMoreComments = false;
-    }
-}
+			// نضيف التعليقات الجديدة إلى نهاية القائمة الحالية
+			comments = [...comments, ...newData.comments];
+		} catch (error) {
+			console.error('Failed to load more comments:', error);
+			// إذا فشل الطلب، نرجع رقم الصفحة كما كان
+			currentCommentPage--;
+		} finally {
+			isLoadingMoreComments = false;
+		}
+	}
 
 	async function updateProgress(pageIndex: number) {
 		if (!user) return;
@@ -296,7 +305,7 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-	class="reader-container flex min-h-screen flex-col font-[Tajawal]"
+	class="reader-container flex min-h-screen w-full flex-col overflow-x-hidden font-[Tajawal]"
 	style="background-color: {$readerBackgroundColor};"
 	on:mousemove={resetTimer}
 	on:touchstart={resetTimer}
@@ -318,46 +327,74 @@
 				&larr; قائمة الفصول
 			</a>
 
-			<div class="flex items-center gap-x-2 md:gap-x-4">
-				<div class="flex items-center space-x-2">
-					<button
-						on:click={() => readingMode.set('vertical')}
-						class="rounded-md px-3 py-1 text-sm transition-colors {$readingMode === 'vertical'
-							? 'bg-orange-600'
-							: 'bg-gray-700 hover:bg-gray-600'}"
-					>
-						عمودي
-					</button>
-					<button
-						on:click={() => readingMode.set('horizontal')}
-						class="rounded-md px-3 py-1 text-sm transition-colors {$readingMode === 'horizontal'
-							? 'bg-orange-600'
-							: 'bg-gray-700 hover:bg-gray-600'}"
-					>
-						أفقي
-					</button>
-				</div>
+			<div class="flex items-center gap-x-2">
+				<button
+					on:click={() => {
+						readingMode.set('vertical');
+						showPageDisplayMenu = false; // إغلاق القائمة عند اختيار الوضع العمودي
+					}}
+					class="rounded-md px-3 py-1 text-sm transition-colors {$readingMode === 'vertical'
+						? 'bg-orange-600'
+						: 'bg-gray-700 hover:bg-gray-600'}"
+				>
+					عمودي
+				</button>
 
-				{#if $readingMode === 'horizontal'}
-					<div class="flex items-center space-x-2 border-l border-gray-600 pl-2">
-						<button
-							on:click={() => pageDisplayMode.set('single')}
-							class="rounded-md px-3 py-1 text-sm transition-colors {$pageDisplayMode === 'single'
-								? 'bg-orange-600'
-								: 'bg-gray-700 hover:bg-gray-600'}"
+				<div class="relative">
+					<button
+						on:click={() => {
+							readingMode.set('horizontal');
+							showPageDisplayMenu = !showPageDisplayMenu; // فتح/إغلاق القائمة
+						}}
+						class="flex items-center gap-1 rounded-md px-3 py-1 text-sm transition-colors {$readingMode ===
+						'horizontal'
+							? 'bg-orange-600'
+							: 'bg-gray-700 hover:bg-gray-600'}"
+					>
+						<span>أفقي</span>
+						<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+							><path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M19 9l-7 7-7-7"
+							></path></svg
 						>
-							صفحة واحدة
-						</button>
-						<button
-							on:click={() => pageDisplayMode.set('double')}
-							class="rounded-md px-3 py-1 text-sm transition-colors {$pageDisplayMode === 'double'
-								? 'bg-orange-600'
-								: 'bg-gray-700 hover:bg-gray-600'}"
+					</button>
+
+					{#if showPageDisplayMenu && $readingMode === 'horizontal'}
+						<div
+							class="ring-opacity-5 absolute top-full left-0 z-10 mt-2 w-40 origin-top-right rounded-md bg-gray-800 shadow-lg ring-1 ring-black focus:outline-none"
 						>
-							صفحتان
-						</button>
-					</div>
-				{/if}
+							<div class="py-1">
+								<button
+									on:click={() => {
+										pageDisplayMode.set('single');
+										showPageDisplayMenu = false; // إغلاق القائمة عند الاختيار
+									}}
+									class="block w-full px-4 py-2 text-right text-sm text-gray-200 hover:bg-gray-700 {$pageDisplayMode ===
+									'single'
+										? 'font-bold text-white'
+										: ''}"
+								>
+									صفحة واحدة
+								</button>
+								<button
+									on:click={() => {
+										pageDisplayMode.set('double');
+										showPageDisplayMenu = false; // إغلاق القائمة عند الاختيار
+									}}
+									class="block w-full px-4 py-2 text-right text-sm text-gray-200 hover:bg-gray-700 {$pageDisplayMode ===
+									'double'
+										? 'font-bold text-white'
+										: ''}"
+								>
+									صفحتان
+								</button>
+							</div>
+						</div>
+					{/if}
+				</div>
 			</div>
 
 			<div class="relative flex items-center gap-x-4">
@@ -452,7 +489,8 @@
 
 				{#if showSettings}
 					<div
-						class="absolute top-full right-0 z-10 mt-2 w-72 rounded-lg border border-gray-700 bg-gray-800 p-4 text-sm shadow-lg"
+						on:click|stopPropagation
+						class="absolute top-full right-0 z-30 mt-2 w-72 rounded-lg border border-gray-700 bg-gray-800 p-4 text-sm shadow-lg"
 					>
 						<div class="mb-4" dir="rtl">
 							<p class="mb-2 font-bold text-white">لون الخلفية</p>
@@ -612,6 +650,10 @@
 		</div>
 	</header>
 
+	{#if showSettings}
+		<div class="fixed inset-0 z-10" on:click={() => (showSettings = false)}></div>
+	{/if}
+
 	{#if showThumbnails}
 		<div
 			class="thumbnails-sidebar fixed top-0 left-0 z-30 h-full w-48 overflow-y-auto bg-gray-900/90 p-2 backdrop-blur-md"
@@ -637,7 +679,6 @@
 							alt="صفحة {i + 1}"
 							class="h-auto w-full"
 							loading="lazy"
-							
 						/>
 						<div
 							class="absolute inset-0 flex items-center justify-center bg-black/50 font-bold text-white opacity-0 transition-opacity group-hover:opacity-100"
@@ -669,7 +710,6 @@
 						class:fit-height={$imageFitMode === 'fit-height'}
 						class:original-size={$imageFitMode === 'original'}
 						loading="lazy"
-						
 					/>
 				{/each}
 			{:else}
@@ -691,7 +731,6 @@
 								$imageFitMode !== 'fit-height'}
 							class:fit-height={$imageFitMode === 'fit-height'}
 							class:original-size={$imageFitMode === 'original'}
-							
 						/>
 						{#if $pageDisplayMode === 'double' && pages[currentPageIndex + 1]}
 							<img
@@ -701,7 +740,6 @@
 								class:fit-width-horizontal-double={$imageFitMode !== 'fit-height'}
 								class:fit-height={$imageFitMode === 'fit-height'}
 								class:original-size={$imageFitMode === 'original'}
-								
 							/>
 						{/if}
 					</div>
@@ -807,26 +845,25 @@
 			{/each}
 		</div>
 
-        {#if comments.length > 0}
-    <div class="mt-8 text-center">
-        {#if currentCommentPage < commentsTotalPages}
-            <button
-                on:click={loadMoreComments}
-                disabled={isLoadingMoreComments}
-                class="rounded-lg bg-gray-700 px-6 py-2 font-bold text-white transition hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-                {#if isLoadingMoreComments}
-                    جارٍ التحميل...
-                {:else}
-                    تحميل المزيد من التعليقات
-                {/if}
-            </button>
-        {:else}
-            <p class="text-gray-500" dir="rtl">وصلت إلى نهاية التعليقات</p>
-        {/if}
-    </div>
-{/if}
-
+		{#if comments.length > 0}
+			<div class="mt-8 text-center">
+				{#if currentCommentPage < commentsTotalPages}
+					<button
+						on:click={loadMoreComments}
+						disabled={isLoadingMoreComments}
+						class="rounded-lg bg-gray-700 px-6 py-2 font-bold text-white transition hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
+					>
+						{#if isLoadingMoreComments}
+							جارٍ التحميل...
+						{:else}
+							تحميل المزيد من التعليقات
+						{/if}
+					</button>
+				{:else}
+					<p class="text-gray-500" dir="rtl">وصلت إلى نهاية التعليقات</p>
+				{/if}
+			</div>
+		{/if}
 	</section>
 </div>
 
@@ -843,13 +880,13 @@
 	}
 	.fit-height {
 		width: auto;
-		max-width: none;
+		max-width: 100%;
 		max-height: 90vh;
 	}
 	.original-size {
 		width: auto;
 		height: auto;
-		max-width: none;
+		max-width: 100%;
 		max-height: none;
 	}
 
@@ -862,8 +899,12 @@
 		max-height: 85vh;
 	}
 	.fit-width-horizontal-double {
-		max-width: 49%;
+		max-width: calc(50% - 4px);
 		max-height: 85vh;
+	}
+
+	.fit-height-container .fit-height {
+		max-width: calc(50% - 4px);
 	}
 
 	/* Thumbnails sidebar */

@@ -5,7 +5,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import type { ActionResult } from '@sveltejs/kit';
 	import { fly } from 'svelte/transition';
-    import { goto } from '$app/navigation';
+	import { goto } from '$app/navigation';
 
 	export let data: PageData;
 
@@ -13,10 +13,10 @@
 	$: ({ history, searchTerm } = data);
 
 	let selected = new Set<string>();
-    let searchInputValue = data.searchTerm || '';
+	let searchInputValue = data.searchTerm || '';
 	let debounceTimer: ReturnType<typeof setTimeout>;
 
-    function handleSearchInput() {
+	function handleSearchInput() {
 		clearTimeout(debounceTimer);
 		debounceTimer = setTimeout(() => {
 			const url = new URL(window.location.href);
@@ -118,23 +118,23 @@
 		</div>
 
 		<form method="GET" class="mb-8" dir="rtl">
-    <div class="relative">
-        <input
-            type="search"
-            name="q"
-            placeholder="ابحث في سجلك..."
-            class="w-full rounded-xl border-2 border-gray-700 bg-gray-800 p-3 pr-10 text-white transition focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50"
-            bind:value={searchInputValue}
-            on:input={handleSearchInput}
-        />
-        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-           <img src="/icons/radar.png" alt="Search" class="h-6 w-6" />
-        </div>
-    </div>
-</form>
+			<div class="relative">
+				<input
+					type="search"
+					name="q"
+					placeholder="ابحث في سجلك..."
+					class="w-full rounded-xl border-2 border-gray-700 bg-gray-800 p-3 pr-10 text-white transition focus:border-orange-500 focus:ring-2 focus:ring-orange-500/50 focus:outline-none"
+					bind:value={searchInputValue}
+					on:input={handleSearchInput}
+				/>
+				<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+					<img src="/icons/radar.png" alt="Search" class="h-6 w-6" />
+				</div>
+			</div>
+		</form>
 
 		{#if selected.size > 0}
-			<div dir="rtl" class="mb-6 flex animate-fade-in items-center gap-4">
+			<div dir="rtl" class="animate-fade-in mb-6 flex items-center gap-4">
 				<form
 					method="POST"
 					action="?/deleteSelected"
@@ -158,8 +158,9 @@
 						حذف ({selected.size}) سجلات محددة
 					</button>
 				</form>
-				<button on:click={() => (selected = new Set())} class="text-sm text-gray-400 hover:underline"
-					>إلغاء التحديد</button
+				<button
+					on:click={() => (selected = new Set())}
+					class="text-sm text-gray-400 hover:underline">إلغاء التحديد</button
 				>
 			</div>
 		{/if}
@@ -177,20 +178,22 @@
 					>
 						<div class="flex items-start gap-4">
 							<label class="relative flex h-8 w-8 cursor-pointer items-center justify-center">
-    <input
-        type="checkbox"
-        checked={selected.has(record.id)}
-        on:change={() => toggleSelection(record.id)}
-        class="absolute h-full w-full cursor-pointer opacity-0"
-    />
-    <img
-        src="/icons/{selected.has(record.id) ? 'db-unchecked.png' : 'db-checked.png'}"
-        alt="Select Record"
-        class="h-7 w-7 transition-transform duration-200 ease-in-out {selected.has(record.id)
-            ? 'scale-110 -rotate-6'
-            : 'scale-90'}"
-    />
-</label>
+								<input
+									type="checkbox"
+									checked={selected.has(record.id)}
+									on:change={() => toggleSelection(record.id)}
+									class="absolute h-full w-full cursor-pointer opacity-0"
+								/>
+								<img
+									src="/icons/{selected.has(record.id) ? 'db-unchecked.png' : 'db-checked.png'}"
+									alt="Select Record"
+									class="h-7 w-7 transition-transform duration-200 ease-in-out {selected.has(
+										record.id
+									)
+										? 'scale-110 -rotate-6'
+										: 'scale-90'}"
+								/>
+							</label>
 							<a href="/manga/{record.expand?.manga.slug}" class="flex-shrink-0">
 								<img
 									src={record.expand?.manga.cover_image_url || '/placeholder.png'}
@@ -256,61 +259,61 @@
 							</div>
 
 							<div class="hidden flex-shrink-0 flex-row items-center justify-center gap-3 md:flex">
-    <a
-        href="/manga/{record.expand?.manga.slug}/{record.expand?.chapter.chapter_number}"
-        class="rounded-full border border-orange-500 px-4 py-1.5 text-sm font-semibold text-orange-500 transition hover:bg-orange-500 hover:text-white"
-    >
-        إعادة القراءة
-    </a>
-    <form
-        method="POST"
-        action="?/deleteRecord"
-        class="m-0"
-        use:enhance={({ formElement }) => {
-            deleting.add(record.id);
-            deleting = deleting;
+								<a
+									href="/manga/{record.expand?.manga.slug}/{record.expand?.chapter.chapter_number}"
+									class="rounded-full border border-orange-500 px-4 py-1.5 text-sm font-semibold text-orange-500 transition hover:bg-orange-500 hover:text-white"
+								>
+									إعادة القراءة
+								</a>
+								<form
+									method="POST"
+									action="?/deleteRecord"
+									class="m-0"
+									use:enhance={({ formElement }) => {
+										deleting.add(record.id);
+										deleting = deleting;
 
-            return async ({ result }) => {
-                handleFormResult({ result, formElement });
-                setTimeout(() => {
-                    deleting.delete(record.id);
-                    deleting = deleting;
-                    if (result.type === 'success') {
-                        invalidateAll();
-                    }
-                }, 300);
-            };
-        }}
-    >
-        <input type="hidden" name="id" value={record.id} />
-        <button
-            type="submit"
-            class="flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold text-gray-400 transition hover:bg-red-500/10 hover:text-red-400 disabled:opacity-50"
-            disabled={deleting.has(record.id)}
-        >
-            <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                ><path d="M3 6h18" /><path
-                    d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
-                /><line x1="10" y1="11" x2="10" y2="17" /><line
-                    x1="14"
-                    y1="11"
-                    x2="14"
-                    y2="17"
-                /></svg
-            >
-            {deleting.has(record.id) ? '...' : 'حذف'}
-        </button>
-    </form>
-</div>
+										return async ({ result }) => {
+											handleFormResult({ result, formElement });
+											setTimeout(() => {
+												deleting.delete(record.id);
+												deleting = deleting;
+												if (result.type === 'success') {
+													invalidateAll();
+												}
+											}, 300);
+										};
+									}}
+								>
+									<input type="hidden" name="id" value={record.id} />
+									<button
+										type="submit"
+										class="flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold text-gray-400 transition hover:bg-red-500/10 hover:text-red-400 disabled:opacity-50"
+										disabled={deleting.has(record.id)}
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											width="14"
+											height="14"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2.5"
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											><path d="M3 6h18" /><path
+												d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+											/><line x1="10" y1="11" x2="10" y2="17" /><line
+												x1="14"
+												y1="11"
+												x2="14"
+												y2="17"
+											/></svg
+										>
+										{deleting.has(record.id) ? '...' : 'حذف'}
+									</button>
+								</form>
+							</div>
 						</div>
 					</li>
 				{:else}

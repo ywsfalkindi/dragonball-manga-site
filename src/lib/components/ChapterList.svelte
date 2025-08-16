@@ -155,10 +155,12 @@
 								>
 							{/if}
 						</div>
-						<span
-							class="hidden rounded-full bg-orange-500 px-3 py-1 text-sm font-bold text-white sm:inline-block"
-							>اقرأ الآن</span
-						>
+
+						{#if !chapter.isRead}
+							<span class="rounded-full bg-orange-500 px-3 py-1 text-sm font-bold text-white"
+								>اقرأ الآن</span
+							>
+						{/if}
 					</a>
 				</li>
 			{:else}

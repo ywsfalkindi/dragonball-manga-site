@@ -1,32 +1,32 @@
 <script lang="ts">
-    import type { LayoutData } from './$types';
-    import '../app.css';
-    import { navigating, page } from '$app/stores';
-    import DragonBall from '$lib/components/DragonBall.svelte';
-    import { onMount } from 'svelte';
-    import { slide } from 'svelte/transition';
-    import { toasts, addToast } from '$lib/stores/toast'; // ✨ استيراد addToast
-    import Toast from '$lib/components/Toast.svelte';
+	import type { LayoutData } from './$types';
+	import '../app.css';
+	import { navigating, page } from '$app/stores';
+	import DragonBall from '$lib/components/DragonBall.svelte';
+	import { onMount } from 'svelte';
+	import { slide } from 'svelte/transition';
+	import { toasts, addToast } from '$lib/stores/toast'; // ✨ استيراد addToast
+	import Toast from '$lib/components/Toast.svelte';
 
-    export let data: LayoutData;
+	export let data: LayoutData;
 
-    let isMenuOpen = false;
+	let isMenuOpen = false;
 
-    $: if ($navigating) {
-        isMenuOpen = false;
-    }
+	$: if ($navigating) {
+		isMenuOpen = false;
+	}
 
-    // ✨ تم تعديل هذا الجزء ليستخدم نظام الإشعارات الجديد
-    onMount(() => {
-        if ($page.url.searchParams.get('logout') === 'true') {
-            addToast('تم تسجيل خروجك بنجاح!', 'success');
+	// ✨ تم تعديل هذا الجزء ليستخدم نظام الإشعارات الجديد
+	onMount(() => {
+		if ($page.url.searchParams.get('logout') === 'true') {
+			addToast('تم تسجيل خروجك بنجاح!', 'success');
 
-            // ننظف الرابط لتجنب ظهور الرسالة مرة أخرى عند تحديث الصفحة
-            const url = new URL(window.location.href);
-            url.searchParams.delete('logout');
-            window.history.replaceState({}, '', url);
-        }
-    });
+			// ننظف الرابط لتجنب ظهور الرسالة مرة أخرى عند تحديث الصفحة
+			const url = new URL(window.location.href);
+			url.searchParams.delete('logout');
+			window.history.replaceState({}, '', url);
+		}
+	});
 </script>
 
 {#if $navigating}
@@ -42,11 +42,10 @@
 {/if}
 
 <div class="fixed top-5 right-5 z-[100] flex flex-col gap-2">
-    {#each $toasts as toast (toast.id)}
-        <Toast message={toast.message} type={toast.type} />
-    {/each}
+	{#each $toasts as toast (toast.id)}
+		<Toast message={toast.message} type={toast.type} />
+	{/each}
 </div>
-
 
 <div class="min-h-screen bg-gray-900 font-[Tajawal] text-white">
 	<nav class="sticky top-0 z-50 bg-gray-800 p-4 text-white shadow-md">

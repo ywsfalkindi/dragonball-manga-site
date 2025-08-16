@@ -42,8 +42,7 @@
 				<input type="hidden" name="commentId" value={comment.id} />
 				<button type="submit" class="flex items-center gap-1 hover:text-white">
 					<span>{comment.likes.length || 0}</span>
-					<span
-						class={user && user.id && comment.likes.includes(user.id) ? 'text-red-500' : ''}
+					<span class={user && user.id && comment.likes.includes(user.id) ? 'text-red-500' : ''}
 						>❤️</span
 					>
 				</button>

@@ -21,10 +21,10 @@ export interface BaseRecord {
  * يمثل النوع الكامل للمستخدم المسجل دخوله في التطبيق.
  */
 export interface User extends BaseRecord {
-    username: string;
-    email: string;
-    name: string;
-    avatar: string;
+	username: string;
+	email: string;
+	name: string;
+	avatar: string;
 }
 
 /**
@@ -38,7 +38,6 @@ export interface PaginatedResult<T> {
 	totalItems: number;
 	items: T[];
 }
-
 
 // ===============================================================
 // ✨ الأنواع الأصلية من ملفك (بدون حذف) ✨

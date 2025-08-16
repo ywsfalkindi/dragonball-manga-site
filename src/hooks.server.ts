@@ -56,11 +56,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 		try {
 			await pb.collection('users').authRefresh();
 
-            // التحقق من الحظر: إذا كان المستخدم محظوراً، امسح المصادقة
-            if (pb.authStore.model?.banned) {
-                pb.authStore.clear();
-            }
-
+			// التحقق من الحظر: إذا كان المستخدم محظوراً، امسح المصادقة
+			if (pb.authStore.model?.banned) {
+				pb.authStore.clear();
+			}
 		} catch (_) {
 			// إذا فشل التحديث، امسح المصادقة
 			pb.authStore.clear();
@@ -69,49 +68,52 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	// 3. تعيين locals بناءً على حالة المصادقة النهائية
 	if (pb.authStore.isValid && pb.authStore.model) {
-        // استخدام structuredClone لنسخة آمنة من بيانات المستخدم
+		// استخدام structuredClone لنسخة آمنة من بيانات المستخدم
 		event.locals.user = structuredClone(pb.authStore.model);
 		event.locals.admin = event.locals.user.isAdmin || false;
 
-        // --- كل منطق المستخدم المسجل دخوله يأتي هنا ---
-        const user = event.locals.user;
-        const now = new Date();
-        const lastLogin = new Date(user.last_login_xp || 0);
-        const oneDay = 24 * 60 * 60 * 1000;
+		// --- كل منطق المستخدم المسجل دخوله يأتي هنا ---
+		const user = event.locals.user;
+		const now = new Date();
+		const lastLogin = new Date(user.last_login_xp || 0);
+		const oneDay = 24 * 60 * 60 * 1000;
 
-        // منطق منح الخبرة اليومية
-        if (now.getTime() - lastLogin.getTime() > oneDay) {
-            await grantXp(user.id, 15);
-            await pb.collection('users').update(user.id, { last_login_xp: now.toISOString() });
-        }
+		// منطق منح الخبرة اليومية
+		if (now.getTime() - lastLogin.getTime() > oneDay) {
+			await grantXp(user.id, 15);
+			await pb.collection('users').update(user.id, { last_login_xp: now.toISOString() });
+		}
 
-        // منطق كرة التنين
-        if (Math.random() < 0.02) {
-            let userBallsRecord;
-            try {
-                userBallsRecord = await pb.collection('user_dragonballs').getFirstListItem(`user.id = "${user.id}"`);
-            } catch (err: any) {
-                if (err.status === 404) {
-                    userBallsRecord = await pb.collection('user_dragonballs').create({ user: user.id, collected_balls: [] });
-                }
-            }
-            if (userBallsRecord) {
-                const collected: number[] = userBallsRecord.collected_balls || [];
-                if (collected.length < 7) {
-                    const availableBalls = [1, 2, 3, 4, 5, 6, 7].filter((b) => !collected.includes(b));
-                    if (availableBalls.length > 0) {
-                        const ballToFind = availableBalls[Math.floor(Math.random() * availableBalls.length)];
-                        event.locals.dragonBall = {
-                            ball_number: ballToFind,
-                            find_token: await createFindToken(user.id, ballToFind)
-                        };
-                    }
-                }
-            }
-        }
-
+		// منطق كرة التنين
+		if (Math.random() < 0.02) {
+			let userBallsRecord;
+			try {
+				userBallsRecord = await pb
+					.collection('user_dragonballs')
+					.getFirstListItem(`user.id = "${user.id}"`);
+			} catch (err: any) {
+				if (err.status === 404) {
+					userBallsRecord = await pb
+						.collection('user_dragonballs')
+						.create({ user: user.id, collected_balls: [] });
+				}
+			}
+			if (userBallsRecord) {
+				const collected: number[] = userBallsRecord.collected_balls || [];
+				if (collected.length < 7) {
+					const availableBalls = [1, 2, 3, 4, 5, 6, 7].filter((b) => !collected.includes(b));
+					if (availableBalls.length > 0) {
+						const ballToFind = availableBalls[Math.floor(Math.random() * availableBalls.length)];
+						event.locals.dragonBall = {
+							ball_number: ballToFind,
+							find_token: await createFindToken(user.id, ballToFind)
+						};
+					}
+				}
+			}
+		}
 	} else {
-        // إذا لم يكن المستخدم مسجل دخوله، تأكد من أن locals فارغة
+		// إذا لم يكن المستخدم مسجل دخوله، تأكد من أن locals فارغة
 		event.locals.user = null;
 		event.locals.admin = false;
 	}
@@ -122,7 +124,11 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// 5. تحديث الكوكيز في النهاية دائماً
 	response.headers.set(
 		'set-cookie',
-		pb.authStore.exportToCookie({ httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax' })
+		pb.authStore.exportToCookie({
+			httpOnly: true,
+			secure: process.env.NODE_ENV === 'production',
+			sameSite: 'lax'
+		})
 	);
 
 	return response;
