@@ -4,7 +4,7 @@ import { error, redirect } from '@sveltejs/kit';
 import type {
 	Manga,
 	Chapter,
-	PocketBaseListResult,
+	PaginatedResult,
 	ReadHistoryRecord,
 	LastReadChapterInfo
 } from '$lib/types';
@@ -81,7 +81,7 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 			user: locals.user || null,
 			manga,
 			isFavorited,
-			chaptersResult: chaptersResult as PocketBaseListResult<Chapter>,
+			chaptersResult: chaptersResult as PaginatedResult<Chapter>,
 			readChapterIds: Array.from(readChapterIds),
 			lastReadChapter,
 			firstUnreadChapter,

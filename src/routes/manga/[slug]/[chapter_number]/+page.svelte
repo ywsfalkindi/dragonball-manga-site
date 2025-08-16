@@ -282,7 +282,7 @@
 <svelte:window on:keydown={handleKeydown} on:scroll={handleScroll} />
 
 <svelte:head>
-	<title>قراءة مانجا {manga.title} - الفصل #{chapter.chapter_number}</title>
+	<title>قراءة مانجا {manga.title} - الفصل {chapter.chapter_number}</title>
 </svelte:head>
 
 <div

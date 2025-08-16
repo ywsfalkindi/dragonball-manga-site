@@ -93,7 +93,6 @@
 		{user}
 		{lastReadChapter}
 		{firstUnreadChapter}
-		{readCount}
 		bind:isFavorited
 		bind:isSubmitting={isTogglingFavorite}
 	/>
