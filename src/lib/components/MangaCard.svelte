@@ -72,10 +72,15 @@
 		/>
 	</div>
 	<div class="flex flex-grow flex-col p-4 md:p-6">
-		<h3 class="mb-2 text-xl font-bold md:text-2xl" dir="rtl">{manga.title}</h3>
-		<p class="line-clamp-3 text-sm leading-relaxed text-gray-400 md:text-base" dir="rtl">
-			{manga.description}
-		</p>
+		<h3 class="mb-2 text-center text-xl font-extrabold md:text-2xl" dir="rtl">{manga.title}</h3>
+		<div class="relative">
+			<p class="line-clamp-3 text-sm leading-relaxed text-gray-300 md:text-base" dir="rtl">
+				{manga.description}
+			</p>
+			<div
+				class="absolute bottom-0 h-1/2 w-full bg-gradient-to-t from-gray-800 to-transparent"
+			></div>
+		</div>
 	</div>
 </a>
 

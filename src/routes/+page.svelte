@@ -107,7 +107,7 @@
 		</form>
 
 		{#if mangas.length > 0}
-			<div class="grid grid-cols-2 gap-4 p-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
 				{#each mangas as manga (manga.id)}
 					<MangaCard
 						{manga}

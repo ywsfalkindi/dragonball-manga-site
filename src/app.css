@@ -1,4 +1,9 @@
 @import 'tailwindcss';
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800&display=swap');
 .manga-card-image-container {
 	aspect-ratio: 2 / 3;
+}
+
+body {
+	font-family: 'Tajawal', sans-serif;
 }
