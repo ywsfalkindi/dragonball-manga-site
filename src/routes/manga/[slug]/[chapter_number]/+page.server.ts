@@ -33,7 +33,6 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 						manga: manga.id,
 						last_page_read: 1
 					});
-					await grantXp(locals.user.id, 25);
 					lastPageRead = 1;
 				}
 			}
@@ -123,9 +122,37 @@ export const actions: Actions = {
 		const rawContent = data.get('content') as string;
 		const parentId = data.get('parentId') as string | null;
 
-		if (!rawContent || rawContent.trim().length === 0) {
-			return fail(400, { error: 'لا يمكن أن يكون التعليق فارغًا.' });
+		// --- بداية التحسينات الأمنية ---
+
+		// 1. التحقق من الحد الأدنى لطول التعليق
+		if (!rawContent || rawContent.trim().length < 15) {
+			return fail(400, { error: 'يجب أن يحتوي التعليق على 15 حرفًا على الأقل.' });
 		}
+
+		// 2. التحقق من الحد الزمني بين التعليقات (Rate Limiting)
+		try {
+			const lastComment = await pb
+				.collection('comments')
+				.getFirstListItem(`user.id = "${locals.user.id}"`, { sort: '-created' });
+
+			const now = new Date();
+			const lastCommentTime = new Date(lastComment.created);
+			const differenceInSeconds = (now.getTime() - lastCommentTime.getTime()) / 1000;
+
+			if (differenceInSeconds < 60) {
+				// 60 ثانية = دقيقة واحدة
+				return fail(429, { error: 'يرجى الانتظار دقيقة واحدة قبل إضافة تعليق جديد.' });
+			}
+		} catch (err: any) {
+			// نتجاهل الخطأ إذا لم يكن للمستخدم تعليقات سابقة (err.status === 404)
+			if (err.status !== 404) {
+				console.error('Rate limit check error:', err);
+				return fail(500, { error: 'حدث خطأ أثناء التحقق من التعليقات.' });
+			}
+		}
+
+		// --- نهاية التحسينات الأمنية ---
+
 		const content = purify.sanitize(rawContent);
 
 		const manga = await pb.collection('mangas').getFirstListItem(`slug = "${params.slug}"`);

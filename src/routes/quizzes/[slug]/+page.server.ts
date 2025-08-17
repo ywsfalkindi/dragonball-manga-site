@@ -104,8 +104,18 @@ export const actions: Actions = {
 				});
 			}
 
-			let totalXpGained = 50;
-			totalXpGained += Math.floor(score / 20);
+			const previousAttempts = await pb.collection('quiz_attempts').getList(1, 1, {
+				filter: `user.id = "${locals.user.id}" && quiz.id = "${quiz.id}"`
+			});
+
+			let totalXpGained = 0;
+
+			// إذا كان عدد المحاولات الكلي يساوي 1 (أي هذه هي المحاولة الأولى التي يتم تسجيلها)
+			if (previousAttempts.totalItems <= 1) {
+				totalXpGained += 50; // امنح النقاط الأساسية
+			}
+
+			totalXpGained += Math.floor(score / 20); // امنح نقاط النتيجة دائمًا
 			await grantXp(locals.user.id, totalXpGained);
 
 			return { success: true, attemptId: attemptRecord.id };

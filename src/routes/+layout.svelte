@@ -150,6 +150,6 @@
 
 <style>
 	:global(:root:fullscreen #main-nav) {
-    display: none;
-}
+		display: none;
+	}
 </style>

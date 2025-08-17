@@ -136,8 +136,6 @@
 		inactivityTimer = setTimeout(hideUI, 3000);
 	}
 
-	
-
 	function handleProgressClick(event: MouseEvent) {
 		const target = event.currentTarget as HTMLDivElement;
 		const rect = target.getBoundingClientRect();
@@ -184,9 +182,9 @@
 						}
 						obs.unobserve(img);
 						const index = imageElements.indexOf(img);
-if (index !== -1) {
-    currentPageIndex = index;
-}
+						if (index !== -1) {
+							currentPageIndex = index;
+						}
 					}
 				});
 			}, options);
@@ -227,16 +225,16 @@ if (index !== -1) {
 
 	let isFullscreen = false;
 	function toggleFullscreen() {
-    if (browser) {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen();
-        } else {
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
-            }
-        }
-    }
-}
+		if (browser) {
+			if (!document.fullscreenElement) {
+				document.documentElement.requestFullscreen();
+			} else {
+				if (document.exitFullscreen) {
+					document.exitFullscreen();
+				}
+			}
+		}
+	}
 
 	function handleKeydown(event: KeyboardEvent) {
 		if (event.key === 'f') {
@@ -850,8 +848,8 @@ if (index !== -1) {
 	}
 
 	:global(:root:fullscreen .reader-footer) {
-    display: none;
-}
+		display: none;
+	}
 
 	/* Vertical Reading Mode Styles */
 	.fit-width {

@@ -2,6 +2,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { pb } from '$lib/pocketbase';
+import { grantXp } from '../../../hooks.server'; // <-- أضفنا هذا السطر
 
 export const POST: RequestHandler = async ({ request, locals }) => {
 	if (!locals.user) {
@@ -24,6 +25,32 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		await pb.collection('read_history').update(record.id, {
 			last_page_read: page
 		});
+
+		// --- بداية المنطق الجديد لمنح نقاط الخبرة ---
+
+		// تحقق إذا كان المستخدم قد أكمل الفصل بالفعل من قبل
+		if (record.completed_reading === true) {
+			return json({ success: true, message: 'Progress updated.' });
+		}
+
+		// جلب عدد الصفحات الكلي للفصل
+		const pagesInChapter = await pb.collection('pages').getFullList({
+			filter: `chapter = "${chapterId}"`,
+			fields: 'id' // نطلب فقط الـ ID لتسريع الاستعلام
+		});
+		const totalPages = pagesInChapter.length;
+
+		// إذا وصل المستخدم للصفحة الأخيرة ولم يكن قد أكمل الفصل من قبل
+		if (page >= totalPages && !record.completed_reading) {
+			// امنح 25 نقطة خبرة
+			await grantXp(locals.user.id, 25);
+
+			// تحديث سجل القراءة وتعيين الفصل كمكتمل
+			await pb.collection('read_history').update(record.id, {
+				completed_reading: true
+			});
+		}
+		// --- نهاية المنطق الجديد ---
 	} catch (err: any) {
 		// إذا لم يتم العثور على السجل (وهذا هو الخطأ المتوقع)، نقوم بإنشائه
 		if (err.status === 404) {
@@ -34,16 +61,15 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 				await pb.collection('read_history').create({
 					user: locals.user.id,
 					chapter: chapterId,
-					manga: chapter.manga, // حصلنا على معرّف المانجا من الفصل
-					last_page_read: page
+					manga: chapter.manga,
+					last_page_read: page,
+					completed_reading: false // القيمة الافتراضية
 				});
 			} catch (createErr) {
-				// معالجة أي خطأ قد يحدث أثناء محاولة الإنشاء
 				console.error('فشل في إنشاء سجل قراءة جديد:', createErr);
 				throw error(500, 'فشل إنشاء سجل القراءة.');
 			}
 		} else {
-			// لأي أخطاء أخرى، يتم تسجيلها وإظهار خطأ عام
 			console.error('فشل في تحديث التقدم:', err);
 			throw error(500, 'فشل تحديث سجل القراءة.');
 		}
