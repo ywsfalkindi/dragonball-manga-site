@@ -48,7 +48,7 @@
 </div>
 
 <div class="min-h-screen bg-gray-900 font-[Tajawal] text-white">
-	<nav class="sticky top-0 z-50 bg-gray-800 p-4 text-white shadow-md">
+	<nav id="main-nav" class="sticky top-0 z-50 bg-gray-800 p-4 text-white shadow-md">
 		<div class="container mx-auto flex flex-wrap items-center justify-between gap-4">
 			<a href="/" class="text-2xl font-bold text-orange-500 hover:text-orange-400">
 				موقع دراغون بول
@@ -147,3 +147,9 @@
 	</nav>
 	<slot />
 </div>
+
+<style>
+	:global(:root:fullscreen #main-nav) {
+    display: none;
+}
+</style>
