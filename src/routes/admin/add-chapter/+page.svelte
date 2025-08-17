@@ -50,9 +50,9 @@
 					required
 				/>
 			</div>
-			<p class="mt-1 text-xs text-gray-400">
+			<p class="mt-1 text-xs text-gray-400" dir="rtl">
 				ملاحظة: سيتم إنشاء أسماء الملفات تلقائيًا بالتنسيق التالي:
-				`manga-slug/chapterX/manga-slug-chXX-pX.jpg`.
+				`manga-slug/chapterX/manga-slug-chXX-pX.webp`.
 			</p>
 
 			{#if form?.error}

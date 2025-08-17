@@ -47,8 +47,12 @@ export const actions: Actions = {
 			const pagesToCreate = [];
 			for (let i = 1; i <= totalPages; i++) {
 				const chapterNumFormatted = String(chapterNumber).padStart(2, '0');
-				const pageNumFormatted = String(i).padStart(2, '0');
-				const imagePath = `${manga.folder_name}/chapter${chapterNumber}/${manga.file_prefix}-ch${chapterNumFormatted}-p${pageNumFormatted}.jpg`;
+
+				// تأكد أن هذا السطر يستخدم "i" مباشرةً
+				const imagePath = `${manga.folder_name}/chapter${chapterNumber}/${manga.file_prefix}-ch${chapterNumFormatted}-p${i}.webp`;
+
+				// اطبع الناتج في الـ Terminal للتأكد
+				console.log('Generated Path:', imagePath);
 
 				pagesToCreate.push({
 					chapter: newChapter.id,
@@ -57,7 +61,9 @@ export const actions: Actions = {
 				});
 			}
 
-			await Promise.all(pagesToCreate.map((page) => pb.collection('pages').create(page)));
+			for (const page of pagesToCreate) {
+				await pb.collection('pages').create(page);
+			}
 			// --- نهاية التحسين الثاني ---
 		} catch (err: any) {
 			return fail(500, { error: `حدث خطأ: ${err.message}` });
