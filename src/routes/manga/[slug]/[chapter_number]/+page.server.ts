@@ -212,28 +212,39 @@ export const actions: Actions = {
 
 		const data = await request.formData();
 		const commentId = data.get('commentId') as string;
+		const userId = locals.user.id;
 
 		try {
-			await pb.collection('comments').update(commentId, {
-				'likes+': locals.user.id
+			// أولاً، اجلب التعليق وتحقق من قائمة الإعجابات الحالية
+			const comment = await pb.collection('comments').getOne(commentId, {
+				fields: 'user,likes'
 			});
 
-			try {
-				const comment = await pb.collection('comments').getOne(commentId, { fields: 'user' });
-				if (comment.user !== locals.user.id) {
-					await grantXp(comment.user, 5);
+			const isAlreadyLiked = comment.likes?.includes(userId);
+
+			if (isAlreadyLiked) {
+				// إذا كان قد أعجب به بالفعل، قم بإزالة الإعجاب
+				await pb.collection('comments').update(commentId, {
+					'likes-': userId
+				});
+			} else {
+				// إذا لم يكن قد أعجب به، قم بإضافة الإعجاب
+				await pb.collection('comments').update(commentId, {
+					'likes+': userId
+				});
+
+				// امنح نقاط الخبرة فقط عند الإعجاب الجديد
+				if (comment.user !== userId) {
+					try {
+						await grantXp(comment.user, 5);
+					} catch (xpError) {
+						console.error('Failed to grant XP for like:', xpError);
+					}
 				}
-			} catch (xpError) {
-				console.error('Failed to grant XP for like:', xpError);
 			}
 		} catch (err) {
-			try {
-				await pb.collection('comments').update(commentId, {
-					'likes-': locals.user.id
-				});
-			} catch (innerErr) {
-				return fail(500, { error: 'فشل التفاعل مع التعليق.' });
-			}
+			console.error('Toggle like error:', err);
+			return fail(500, { error: 'فشل التفاعل مع التعليق.' });
 		}
 
 		return { success: true };
