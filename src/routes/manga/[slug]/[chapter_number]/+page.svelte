@@ -136,34 +136,7 @@
 		inactivityTimer = setTimeout(hideUI, 3000);
 	}
 
-	let lastScrollY = 0;
-	function handleScroll() {
-		if (browser) {
-			if (window.scrollY < lastScrollY) {
-				uiVisible = true;
-				resetTimer();
-			}
-			lastScrollY = window.scrollY;
-			if ($readingMode === 'vertical') {
-				let closestPageIndex = 0;
-				let minDistance = Infinity;
-				imageElements.forEach((el, index) => {
-					if (el) {
-						const rect = el.getBoundingClientRect();
-						const distance = Math.abs(rect.top - 80);
-
-						if (distance < minDistance) {
-							minDistance = distance;
-							closestPageIndex = index;
-						}
-					}
-				});
-				if (currentPageIndex !== closestPageIndex) {
-					currentPageIndex = closestPageIndex;
-				}
-			}
-		}
-	}
+	
 
 	function handleProgressClick(event: MouseEvent) {
 		const target = event.currentTarget as HTMLDivElement;
@@ -197,7 +170,7 @@
 		if ($readingMode === 'vertical' && imageElements.length > 1) {
 			const options = {
 				root: null,
-				rootMargin: '500px 0px',
+				rootMargin: '1500px 0px',
 				threshold: 0.01
 			};
 
@@ -210,6 +183,10 @@
 							img.src = src;
 						}
 						obs.unobserve(img);
+						const index = imageElements.indexOf(img);
+if (index !== -1) {
+    currentPageIndex = index;
+}
 					}
 				});
 			}, options);
@@ -288,7 +265,7 @@
 	}
 </script>
 
-<svelte:window on:keydown={handleKeydown} on:scroll={handleScroll} />
+<svelte:window on:keydown={handleKeydown} />
 
 <svelte:head>
 	<title>قراءة مانجا {manga.title} - الفصل {chapter.chapter_number}</title>
