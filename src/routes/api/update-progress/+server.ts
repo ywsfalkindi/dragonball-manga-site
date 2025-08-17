@@ -42,10 +42,27 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 		// إذا وصل المستخدم للصفحة الأخيرة ولم يكن قد أكمل الفصل من قبل
 		if (page >= totalPages && !record.completed_reading) {
-			// امنح 25 نقطة خبرة
-			await grantXp(locals.user.id, 25);
+			// --- بداية منطق التحقق من الوقت ---
+			const startTime = new Date(record.reading_started_at).getTime();
+			const endTime = new Date().getTime();
+			const timeSpentInSeconds = (endTime - startTime) / 1000;
 
-			// تحديث سجل القراءة وتعيين الفصل كمكتمل
+			// لنفترض أن الوقت المنطقي لقراءة صفحة هو ثانيتان على الأقل
+			const minimumTimeRequired = totalPages * 2; // مثال: فصل 20 صفحة يتطلب 40 ثانية
+
+			// إذا كان الوقت المستغرق غير منطقي، لا تمنح نقاط خبرة
+			if (timeSpentInSeconds < minimumTimeRequired) {
+				// يمكنك تسجيل هذا السلوك المشبوه إذا أردت
+				console.warn(
+					`User ${locals.user.id} may be cheating. Finished chapter ${chapterId} in ${timeSpentInSeconds}s.`
+				);
+			} else {
+				// الوقت منطقي، امنح 25 نقطة خبرة
+				await grantXp(locals.user.id, 25);
+			}
+			// --- نهاية منطق التحقق من الوقت ---
+
+			// سيتم تحديث حالة الفصل كمكتمل في كل الأحوال
 			await pb.collection('read_history').update(record.id, {
 				completed_reading: true
 			});
@@ -63,7 +80,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 					chapter: chapterId,
 					manga: chapter.manga,
 					last_page_read: page,
-					completed_reading: false // القيمة الافتراضية
+					completed_reading: false, // القيمة الافتراضية
+					reading_started_at: new Date().toISOString()
 				});
 			} catch (createErr) {
 				console.error('فشل في إنشاء سجل قراءة جديد:', createErr);
