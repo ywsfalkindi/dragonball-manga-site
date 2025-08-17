@@ -250,16 +250,16 @@
 
 	let isFullscreen = false;
 	function toggleFullscreen() {
-		if (browser) {
-			if (!document.fullscreenElement) {
-				document.documentElement.requestFullscreen();
-			} else {
-				if (document.exitFullscreen) {
-					document.exitFullscreen();
-				}
-			}
-		}
-	}
+    if (browser) {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen();
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            }
+        }
+    }
+}
 
 	function handleKeydown(event: KeyboardEvent) {
 		if (event.key === 'f') {
@@ -871,6 +871,10 @@
 	:global(:root:fullscreen .sticky-header) {
 		display: none;
 	}
+
+	:global(:root:fullscreen .reader-footer) {
+    display: none;
+}
 
 	/* Vertical Reading Mode Styles */
 	.fit-width {
