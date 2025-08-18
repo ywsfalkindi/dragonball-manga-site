@@ -16,24 +16,36 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 			.collection('chapters')
 			.getFirstListItem(`manga.id = "${manga.id}" && chapter_number = ${params.chapter_number}`);
 
-		const pageFromUrl = Number(url.searchParams.get('page'));
 		let lastPageRead = 1;
+		const pageFromUrl = Number(url.searchParams.get('page'));
 
-		if (locals.user) {
+		// ✅ -- بداية الإصلاح --
+		// لن نحاول البحث عن سجل القراءة إلا إذا كان المستخدم مسجلاً دخوله بالفعل
+		if (locals.user && locals.user.id) {
 			try {
+				// نبحث عن سجل خاص بهذا المستخدم وهذا الفصل تحديدًا
 				const historyRecord = await pb
 					.collection('read_history')
 					.getFirstListItem(`user.id = "${locals.user.id}" && chapter.id = "${chapter.id}"`);
+
+				// إذا وجدنا سجلًا، نستخدم رقم الصفحة منه
 				lastPageRead = historyRecord.last_page_read || 1;
 			} catch (err: any) {
+				// إذا كان الخطأ هو 404 (لم يتم العثور على السجل)، فهذا يعني أنها أول قراءة للمستخدم
 				if (err.status === 404) {
+					console.log(`No read history for user ${locals.user.id}, creating new record.`);
+					// نقوم بإنشاء سجل جديد له يبدأ من الصفحة 1
 					await pb.collection('read_history').create({
 						user: locals.user.id,
 						chapter: chapter.id,
 						manga: manga.id,
-						last_page_read: 1
+						last_page_read: 1,
+						reading_started_at: new Date().toISOString() // إضافة تاريخ البدء
 					});
-					lastPageRead = 1;
+					lastPageRead = 1; // ونتأكد من أن الصفحة الأولى هي البداية
+				} else {
+					// لأي أخطاء أخرى، نطبعها في الطرفية للمساعدة في التشخيص
+					console.error('An error occurred while fetching read history:', err);
 				}
 			}
 		}

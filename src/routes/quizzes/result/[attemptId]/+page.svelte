@@ -7,10 +7,10 @@
 
 	export let data: PageData;
 	onMount(() => {
-    console.log('--- 🕵️‍♂️ بيانات المراجعة جاهزة ---');
-    console.log('All questions data:', data.questions);
-    console.log('All user answers data:', data.userAnswers);
-});
+		console.log('--- 🕵️‍♂️ بيانات المراجعة جاهزة ---');
+		console.log('All questions data:', data.questions);
+		console.log('All user answers data:', data.userAnswers);
+	});
 	$: attempt = data.attempt;
 	$: correctAnswersCount = data.userAnswers.filter((answer) => answer.isCorrect).length;
 	$: percentage =
@@ -151,11 +151,11 @@
 		>
 			<h2 class="mb-6 text-center text-3xl font-bold text-orange-400">مراجعة إجاباتك</h2>
 			{#each data.userAnswers as userAnswer (userAnswer.questionId)}
-				{@const question = data.questions.find(q => q.id === userAnswer.questionId)}
+				{@const question = data.questions.find((q) => q.id === userAnswer.questionId)}
 
-{console.log(`- Searching for questionId: "${userAnswer.questionId}" ... Found:`, question)}
+				{console.log(`- Searching for questionId: "${userAnswer.questionId}" ... Found:`, question)}
 
-{#if question}
+				{#if question}
 					{@const optionsToShow = question.type === 'true_false' ? [1, 2] : [1, 2, 3, 4]}
 					<div class="rounded-lg bg-gray-700/50 p-4" dir="rtl">
 						<p class="mb-4 text-lg font-semibold" dir="rtl">{question.text}</p>

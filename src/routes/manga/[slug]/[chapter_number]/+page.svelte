@@ -43,6 +43,7 @@
 	let newCommentContent = '';
 	let currentCommentPage = 1;
 	let isLoadingMoreComments = false;
+	let initialLoadComplete = false; // ✅ أضف هذا السطر
 	let showPageDisplayMenu = false;
 
 	const handleAddComment: SubmitFunction = () => {
@@ -182,9 +183,12 @@
 						}
 						obs.unobserve(img);
 						const index = imageElements.indexOf(img);
-						if (index !== -1) {
+						// ✅ -- بداية الإصلاح --
+						// لن نقوم بتحديث الصفحة إلا بعد اكتمال التحميل الأولي
+						if (index !== -1 && initialLoadComplete) {
 							currentPageIndex = index;
 						}
+						// ✅ -- نهاية الإصلاح --
 					}
 				});
 			}, options);
@@ -192,6 +196,10 @@
 				if (img) observer.observe(img);
 			});
 		}
+
+		setTimeout(() => {
+			initialLoadComplete = true;
+		}, 500); // ✅ أضف هذا السطر
 
 		return () => {
 			document.removeEventListener('fullscreenchange', updateFullscreenStatus);
