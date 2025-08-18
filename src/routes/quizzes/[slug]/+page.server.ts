@@ -4,7 +4,7 @@ import { error, fail, redirect } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import { grantXp } from '../../../hooks.server';
 
-export const load: PageServerLoad = async ({ params, locals }) => {
+export const load: PageServerLoad = async ({ params, locals, cookies }) => {
 	if (!locals.user) throw redirect(303, '/login?redirect=/quizzes/' + params.slug);
 
 	try {
@@ -27,6 +27,12 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
 		delete quiz.expand;
 
+		cookies.set(`quiz_start_time_${quiz.id}`, Date.now().toString(), {
+			path: `/quizzes/${params.slug}`,
+			httpOnly: true, // مهم للأمان
+			maxAge: 60 * 60 // صلاحية لمدة ساعة
+		});
+
 		return { quiz, questions };
 	} catch (err) {
 		throw error(404, 'هذا الاختبار غير موجود أو غير متاح.');
@@ -34,14 +40,29 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 };
 
 export const actions: Actions = {
-	submitQuiz: async ({ request, locals, params }) => {
+	submitQuiz: async ({ request, locals, params, cookies }) => {
 		if (!locals.user) throw redirect(303, '/login');
 
 		const formData = await request.formData();
 		const userAnswers: { questionId: string; selectedOption: number }[] = JSON.parse(
 			formData.get('answers') as string
 		);
-		const timeTaken = parseInt(formData.get('time_taken') as string, 10);
+		// const timeTaken = parseInt(formData.get('time_taken') as string, 10); // <-- سنحذف هذا السطر أو نجعله تعليقًا
+
+		// --- بداية التعديل: حساب الوقت من الخادم ---
+		const quizId = (
+			await pb.collection('quizzes').getFirstListItem(`slug = "${params.slug}"`, { fields: 'id' })
+		).id;
+		const startTimeCookie = cookies.get(`quiz_start_time_${quizId}`);
+		const startTime = startTimeCookie ? parseInt(startTimeCookie, 10) : 0;
+
+		let timeTaken = 0;
+		if (startTime > 0) {
+			timeTaken = Math.round((Date.now() - startTime) / 1000);
+			// حذف الكوكي بعد استخدامه
+			cookies.delete(`quiz_start_time_${quizId}`, { path: `/quizzes/${params.slug}` });
+		}
+		// --- نهاية التعديل ---
 
 		try {
 			const quiz = await pb.collection('quizzes').getFirstListItem(`slug = "${params.slug}"`, {
@@ -112,11 +133,15 @@ export const actions: Actions = {
 
 			// إذا كان عدد المحاولات الكلي يساوي 1 (أي هذه هي المحاولة الأولى التي يتم تسجيلها)
 			if (previousAttempts.totalItems <= 1) {
-				totalXpGained += 50; // امنح النقاط الأساسية
+				totalXpGained += 50; // امنح النقاط الأساسية للمحاولة الأولى
+				totalXpGained += Math.floor(score / 20); // امنح نقاط النتيجة للمحاولة الأولى فقط
 			}
 
-			totalXpGained += Math.floor(score / 20); // امنح نقاط النتيجة دائمًا
-			await grantXp(locals.user.id, totalXpGained);
+			// --- بداية التعديل: لا تمنح نقاطًا إذا كانت القيمة صفرًا ---
+			if (totalXpGained > 0) {
+				await grantXp(locals.user.id, totalXpGained);
+			}
+			// --- نهاية التعديل ---
 
 			return { success: true, attemptId: attemptRecord.id };
 		} catch (err) {
