@@ -1,12 +1,18 @@
 <script lang="ts">
 	import { slide } from 'svelte/transition';
+	import { onMount } from 'svelte';
 	import type { PageData } from './$types';
 	// ✨ تحسين: استيراد page store للوصول إلى رابط الصفحة الحالي
 	import { page } from '$app/stores';
 
 	export let data: PageData;
+	onMount(() => {
+    console.log('--- 🕵️‍♂️ بيانات المراجعة جاهزة ---');
+    console.log('All questions data:', data.questions);
+    console.log('All user answers data:', data.userAnswers);
+});
 	$: attempt = data.attempt;
-	$: correctAnswersCount = data.userAnswers.filter((answer) => answer.is_correct).length;
+	$: correctAnswersCount = data.userAnswers.filter((answer) => answer.isCorrect).length;
 	$: percentage =
 		attempt.total_questions > 0 ? (correctAnswersCount / attempt.total_questions) * 100 : 0;
 	let showReview = false;
@@ -144,16 +150,19 @@
 			transition:slide
 		>
 			<h2 class="mb-6 text-center text-3xl font-bold text-orange-400">مراجعة إجاباتك</h2>
-			{#each data.userAnswers as userAnswer (userAnswer.id)}
-				{@const question = userAnswer.expand?.question}
-				{#if question}
+			{#each data.userAnswers as userAnswer (userAnswer.questionId)}
+				{@const question = data.questions.find(q => q.id === userAnswer.questionId)}
+
+{console.log(`- Searching for questionId: "${userAnswer.questionId}" ... Found:`, question)}
+
+{#if question}
 					{@const optionsToShow = question.type === 'true_false' ? [1, 2] : [1, 2, 3, 4]}
 					<div class="rounded-lg bg-gray-700/50 p-4" dir="rtl">
 						<p class="mb-4 text-lg font-semibold" dir="rtl">{question.text}</p>
 
 						<div class="space-y-2">
 							{#each optionsToShow as optionNum}
-								{@const isUserAnswer = userAnswer.selected_option === optionNum}
+								{@const isUserAnswer = userAnswer.selectedOption === optionNum}
 								{@const isCorrectAnswer = question.correct_option === optionNum}
 								<div
 									class="rounded border-2 p-3 {isUserAnswer && isCorrectAnswer
