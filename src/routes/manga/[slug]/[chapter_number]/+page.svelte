@@ -11,7 +11,7 @@
 	import { goto } from '$app/navigation';
 	import { enhance } from '$app/forms';
 	import type { SubmitFunction } from '@sveltejs/kit';
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount, onDestroy, tick } from 'svelte';
 	import { browser } from '$app/environment';
 	import { PUBLIC_CDN_URL } from '$env/static/public';
 	import Comment from '$lib/components/Comment.svelte';
@@ -30,8 +30,10 @@
 	} = data);
 	$: currentChapter = chapter ? Number(chapter.chapter_number) : 0;
 
-	$: currentPageIndex = Math.max(0, Math.min((lastPageRead || 1) - 1, pages.length - 1));
-
+	$: currentPageIndex = pages ? Math.max(0, Math.min((lastPageRead || 1) - 1, pages.length - 1)) : 0;
+    $: if (browser) {
+		console.log('%cPage Index Changed To:', 'color: lightblue; font-weight: bold;', currentPageIndex);
+	}
 	$: progress = pages.length > 0 ? ((currentPageIndex + 1) / pages.length) * 100 : 0;
 	let imagesToPreload: string[] = [];
 	const PRELOAD_AHEAD_COUNT = 7;
@@ -89,42 +91,47 @@
 	}
 
 	async function updateProgress(pageIndex: number) {
-		if (!user) return;
-		clearTimeout(updateTimeout);
-		// تم تقليل مدة التأخير إلى 500ms
-		updateTimeout = setTimeout(async () => {
-			try {
-				await fetch('/api/update-progress', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({
-						chapterId: chapter.id,
-						page: pageIndex + 1
-					})
-				});
-			} catch (err) {
-				console.error('Failed to update progress:', err);
-			}
-		}, 500);
-	}
+	// إذا كان زائراً، لا تفعل شيئاً
+	if (!user) return;
+    console.log('%c1. updateProgress CALLED for index:', 'color: orange;', pageIndex);
+	// هذه هي خدعة الـ "debounce":
+	// أولاً، نلغي أي مؤقت حفظ سابق لم يتم تنفيذه بعد.
+	clearTimeout(updateTimeout);
 
-	$: if (browser && pages.length > 0) {
+	// ثانياً، نضبط مؤقتاً جديداً. سيتم إرسال طلب الحفظ بعد 500 جزء من الثانية.
+	// إذا قام المستخدم بتغيير الصفحة مرة أخرى خلال هذه الفترة، سيتم إلغاء هذا المؤقت والبدء من جديد.
+	updateTimeout = setTimeout(async () => {
+		console.log('%c2. SENDING REQUEST to API now...', 'color: yellow;');
+		try {
+			const response = await fetch('/api/update-progress', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					chapterId: chapter.id,
+					// نرسل رقم الصفحة الفعلي (index + 1)
+					page: pageIndex + 1
+				})
+			});
+
+			if (!response.ok) {
+					console.error('API Error Response:', await response.text());
+				} else {
+					console.log('%c3. SUCCESS! Progress saved.', 'color: lightgreen; font-weight: bold;');
+				}
+				
+		} catch (err) {
+			console.error('Failed to update progress (Fetch Error):', err);
+			// في حال فشل الحفظ، يمكننا إظهار رسالة للمستخدم لاحقاً
+			console.error('Failed to update progress:', err);
+		}
+	}, 500); // تأخير لمدة نصف ثانية
+}
+
+	$: if (browser && pages.length > 0 && initialLoadComplete) {
 		updateProgress(currentPageIndex);
 	}
 
-	// ✨ الإصلاح الثاني: التمرير التلقائي عند تغيير الفصل ✨
-	$: {
-		if (browser && chapter?.id) {
-			if ($readingMode === 'vertical') {
-				setTimeout(() => {
-					const pageElement = document.getElementById(`page-${currentPageIndex}`);
-					if (pageElement) {
-						pageElement.scrollIntoView({ behavior: 'auto', block: 'start' });
-					}
-				}, 100);
-			}
-		}
-	}
+	
 
 	function hideUI() {
 		if (showSettings || showThumbnails) return;
@@ -157,62 +164,69 @@
 		}
 	}
 
-	let imageElements: HTMLImageElement[] = [];
 	let observer: IntersectionObserver;
-	onMount(() => {
-		resetTimer();
-		const updateFullscreenStatus = () => {
-			isFullscreen = document.fullscreenElement !== null;
-		};
-		document.addEventListener('fullscreenchange', updateFullscreenStatus);
+let imageElements: HTMLImageElement[] = [];
 
-		if ($readingMode === 'vertical' && imageElements.length > 1) {
-			const options = {
-				root: null,
-				rootMargin: '1500px 0px',
-				threshold: 0.01
-			};
+onMount(async () => {
+		// الخطوة 1: انتظر حتى يتم رسم كل شيء على الشاشة
+		await tick();
 
-			observer = new IntersectionObserver((entries, obs) => {
-				entries.forEach((entry) => {
-					if (entry.isIntersecting) {
-						const img = entry.target as HTMLImageElement;
-						const src = img.dataset.src;
-						if (src) {
-							img.src = src;
-						}
-						obs.unobserve(img);
-						const index = imageElements.indexOf(img);
-						// ✅ -- بداية الإصلاح --
-						// لن نقوم بتحديث الصفحة إلا بعد اكتمال التحميل الأولي
-						if (index !== -1 && initialLoadComplete) {
-							currentPageIndex = index;
-						}
-						// ✅ -- نهاية الإصلاح --
-					}
-				});
-			}, options);
-			imageElements.forEach((img) => {
-				if (img) observer.observe(img);
-			});
+		// الخطوة 2: قم بالتمرير إلى الصفحة الصحيحة فوراً
+		if ($readingMode === 'vertical') {
+			const pageElement = document.getElementById(`page-${currentPageIndex}`);
+			if (pageElement) {
+				pageElement.scrollIntoView({ behavior: 'auto', block: 'start' });
+			}
 		}
+		
+		resetTimer();
 
+		// الخطوة 3: انتظر جزءاً من الثانية قبل تشغيل المراقب الذكي
+		// هذا يعطي المتصفح وقتاً كافياً لإتمام التمرير قبل أن يبدأ المراقب بالعمل
 		setTimeout(() => {
+			if ($readingMode === 'vertical' && pages?.length > 0) {
+				const options = { root: null, rootMargin: '500px 0px', threshold: 0.1 };
+
+				observer = new IntersectionObserver((entries) => {
+					entries.forEach((entry) => {
+						if (entry.isIntersecting) {
+							const img = entry.target as HTMLImageElement;
+							const src = img.dataset.src;
+							if (src) {
+								img.src = src;
+							}
+						}
+					});
+
+					if (!initialLoadComplete) return;
+
+					const visiblePages = entries
+						.filter((e) => e.isIntersecting)
+						.map((e) => ({
+							index: imageElements.indexOf(e.target as HTMLImageElement),
+							top: e.boundingClientRect.top
+						}))
+						.filter((p) => p.index !== -1)
+						.sort((a, b) => a.top - b.top);
+
+					if (visiblePages.length > 0) {
+						currentPageIndex = visiblePages[0].index;
+					}
+				}, options);
+
+				imageElements.forEach((img) => {
+					if (img) observer.observe(img);
+				});
+			}
+			// الخطوة 4: الآن فقط، وبعد أن استقرت الصفحة، يمكن للمراقب أن يبدأ بتحديث التقدم
 			initialLoadComplete = true;
-		}, 500); // ✅ أضف هذا السطر
-
-		return () => {
-			document.removeEventListener('fullscreenchange', updateFullscreenStatus);
-			clearTimeout(inactivityTimer);
-			if (observer) observer.disconnect();
-			clearTimeout(updateTimeout);
-		};
+		}, 100); // تأخير بسيط لكنه حاسم
 	});
-
+	
 	onDestroy(() => {
+		if (observer) observer.disconnect();
 		clearTimeout(inactivityTimer);
 		clearTimeout(updateTimeout);
-		if (observer) observer.disconnect();
 	});
 
 	$: {
