@@ -27,3 +27,18 @@ export const signupSchema = SignupFormObject.refine(
 		path: ['passwordConfirm'] // نحدد أن هذا الخطأ يتعلق بحقل "تأكيد كلمة المرور".
 	}
 );
+
+// ======================= الاضافة تبدأ هنا =======================
+// تعريف البيانات لفورم إضافة فصل جديد
+export const mangasSchema = z.object({
+	manga: z.string().min(1, { message: 'يجب اختيار مانجا' }),
+	url: z.string().url({ message: 'الرابط غير صحيح' }),
+	title: z.string().min(1, { message: 'العنوان مطلوب' }),
+	chapter_number: z.string().min(1, { message: 'رقم الفصل مطلوب' })
+});
+// ======================= الاضافة تنتهي هنا =======================
+
+export const loginSchema = z.object({
+	email: z.string().email({ message: 'الرجاء إدخال بريد إلكتروني صالح.' }),
+	password: z.string().min(8, { message: 'يجب أن تكون كلمة المرور 8 أحرف على الأقل.' })
+});

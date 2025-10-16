@@ -1,15 +1,22 @@
-// src/routes/signup/+page.server.ts
-
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { pb } from '$lib/pocketbase';
-import { signupSchema } from '$lib/schemas'; // <-- استيراد مخطط التحقق الجديد
-import { zod } from 'sveltekit-superforms/adapters'; // <-- محول Zod لـ Superforms
-import { superValidate } from 'sveltekit-superforms/server'; // <-- "السر" الكبير!
+import { signupSchema } from '$lib/schemas';
+import { zod } from 'sveltekit-superforms/adapters';
+import { superValidate } from 'sveltekit-superforms/server';
 
-// هذه الدالة load تعمل قبل تحميل الصفحة
-// نستخدمها لإنشاء نموذج فارغ مرتبط بمخطط Zod الخاص بنا
-// هذا يضمن أن الواجهة الأمامية والخادم يتشاركان نفس "فهم" النموذج
+// ======================= الاضافة تبدأ هنا =======================
+import { RateLimiter } from 'sveltekit-rate-limiter/server';
+
+// إعداد آلية تحديد الطلبات
+// يسمح بإنشاء 5 حسابات جديدة فقط كل ساعة من نفس عنوان الـ IP
+const limiter = new RateLimiter({
+	rates: {
+		IP: [5, 'h']
+	}
+});
+// ======================= الاضافة تنتهي هنا =======================
+
 export const load: PageServerLoad = async () => {
 	return {
 		form: await superValidate(zod(signupSchema))
@@ -17,57 +24,56 @@ export const load: PageServerLoad = async () => {
 };
 
 export const actions: Actions = {
-	// هذا هو الـ "action" الرئيسي لإنشاء الحساب
-	default: async ({ request, cookies }) => {
-		// الخطوة 1: نستخدم superValidate للتحقق من البيانات القادمة من النموذج
-		// مقابل مخطط Zod الذي عرفناه. الأمر بهذه البساطة!
+	default: async (event) => {
+		const { request, cookies } = event;
 		const form = await superValidate(request, zod(signupSchema));
 
-		// الخطوة 2: إذا كانت البيانات غير صالحة (form.valid === false)
-		// فإن superValidate سيعيد النموذج مع رسائل الخطأ تلقائياً. لا حاجة لكتابة أي كود إضافي!
 		if (!form.valid) {
 			return fail(400, { form });
 		}
 
-		// الخطوة 3: إذا كانت البيانات صالحة، نحاول إنشاء المستخدم في PocketBase
+		// ======================= التعديل يبدأ هنا =======================
+		// تطبيق آلية تحديد الطلبات على هذا الإجراء
+		if (await limiter.isLimited(event)) {
+			// نضيف رسالة خطأ عامة إلى النموذج لإبلاغ المستخدم
+			form.errors._errors = ['لقد تجاوزت الحد المسموح به لإنشاء حسابات جديدة.'];
+			return fail(429, { form }); // Status code for "Too Many Requests"
+		}
+		// ======================= التعديل ينتهي هنا =======================
+
 		try {
 			await pb.collection('users').create({
 				...form.data,
-				name: form.data.username, // PocketBase يتوقع حقل "name" أيضاً
+				name: form.data.username,
 				emailVisibility: true
 			});
 		} catch (err: any) {
-			// إذا حدث خطأ من PocketBase (مثل اسم مستخدم موجود بالفعل)
 			console.error('PocketBase Error:', err);
 			const validationErrors = err.data?.data;
 
-			// نتعامل مع حالة "البريد الإلكتروني أو اسم المستخدم موجود بالفعل"
 			if (
 				validationErrors?.username?.code === 'validation_not_unique' ||
 				validationErrors?.email?.code === 'validation_not_unique'
 			) {
-				// "سر" Superforms: نضيف الخطأ يدوياً إلى النموذج
-				// ونربطه بالحقل الصحيح (email) ليعرض في المكان المناسب في الواجهة
 				form.errors.email = ['اسم المستخدم أو البريد الإلكتروني مسجل بالفعل.'];
 				return fail(400, { form });
 			}
 
-			// لأي خطأ آخر غير متوقع من الخادم
 			form.errors._errors = ['حدث خطأ ما أثناء إنشاء الحساب. يرجى المحاولة مرة أخرى.'];
 			return fail(500, { form });
 		}
 
-		// --- التحسين الذي تحدثنا عنه: تسجيل الدخول التلقائي ---
+		// تسجيل الدخول التلقائي بعد إنشاء الحساب
 		try {
 			await pb.collection('users').authWithPassword(form.data.email, form.data.password);
 			cookies.set('pb_auth', pb.authStore.exportToCookie(), { path: '/' });
-		} catch (authError) {
-			console.error('Auto-login failed after signup:', authError);
-			// كخطة بديلة، نوجهه لصفحة الدخول
-			throw redirect(303, '/login?registered=true');
+		} catch (err) {
+			console.error('Auto-login Error:', err);
+			// إذا فشل تسجيل الدخول التلقائي، نوجه المستخدم لصفحة تسجيل الدخول
+			throw redirect(303, '/login');
 		}
 
-		// نوجه المستخدم إلى صفحته الشخصية مباشرة
-		throw redirect(303, '/profile');
+		// توجيه المستخدم إلى الصفحة الرئيسية بعد نجاح العملية
+		throw redirect(303, '/');
 	}
 };

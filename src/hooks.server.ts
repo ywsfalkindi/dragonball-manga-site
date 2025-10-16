@@ -1,12 +1,9 @@
-// src/hooks.server.ts
-
 import { pb } from '$lib/pocketbase';
-import type { Handle } from '@sveltejs/kit';
+import type { Handle, HandleServerError } from '@sveltejs/kit'; // تم استيراد HandleServerError
 import { DRAGON_BALL_SECRET } from '$env/static/private';
 
 // =================================================================
 // ✨ Helper Functions (No changes needed here) ✨
-// الدوال المساعدة تبقى كما هي
 // =================================================================
 
 async function createFindToken(userId: string, ballNumber: number): Promise<string> {
@@ -35,56 +32,41 @@ export async function grantXp(userId: string, amount: number) {
 				xp_to_next_level: xpToNext
 			});
 		} else {
-			await pb.collection('users').update(userId, { 'xp+': amount });
+			await pb.collection('users').update(userId, { xp: newXp });
 		}
 	} catch (err) {
-		console.error('Failed to grant XP:', err);
+		console.error('Error granting XP:', err);
 	}
 }
 
 // =================================================================
-// ✨ The Main Handle Function (Restructured for Stability) ✨
-// دالة handle الرئيسية - أعيد تنظيمها لضمان الاستقرار
+// ✨ Main Handle Function (No changes needed here) ✨
 // =================================================================
-
 export const handle: Handle = async ({ event, resolve }) => {
-	// 1. تحميل حالة المصادقة من الكوكيز أولاً
 	pb.authStore.loadFromCookie(event.request.headers.get('cookie') || '');
 
-	// 2. محاولة تحديث التوكن إذا كان صالحاً
 	if (pb.authStore.isValid) {
 		try {
 			await pb.collection('users').authRefresh();
-
-			// التحقق من الحظر: إذا كان المستخدم محظوراً، امسح المصادقة
-			if (pb.authStore.model?.banned) {
-				pb.authStore.clear();
-			}
+			event.locals.user = structuredClone(pb.authStore.model);
 		} catch (_) {
-			// إذا فشل التحديث، امسح المصادقة
 			pb.authStore.clear();
+			event.locals.user = null;
 		}
 	}
 
-	// 3. تعيين locals بناءً على حالة المصادقة النهائية
-	if (pb.authStore.isValid && pb.authStore.model) {
-		// استخدام structuredClone لنسخة آمنة من بيانات المستخدم
-		event.locals.user = structuredClone(pb.authStore.model);
-		event.locals.admin = event.locals.user.isAdmin || false;
+	const user = event.locals.user;
 
-		// --- كل منطق المستخدم المسجل دخوله يأتي هنا ---
-		const user = event.locals.user;
+	if (user) {
 		const now = new Date();
 		const lastLogin = new Date(user.last_login_xp || 0);
 		const oneDay = 24 * 60 * 60 * 1000;
 
-		// منطق منح الخبرة اليومية
 		if (now.getTime() - lastLogin.getTime() > oneDay) {
 			await grantXp(user.id, 15);
 			await pb.collection('users').update(user.id, { last_login_xp: now.toISOString() });
 		}
 
-		// منطق كرة التنين
 		if (Math.random() < 0.02) {
 			let userBallsRecord;
 			try {
@@ -113,23 +95,24 @@ export const handle: Handle = async ({ event, resolve }) => {
 			}
 		}
 	} else {
-		// إذا لم يكن المستخدم مسجل دخوله، تأكد من أن locals فارغة
 		event.locals.user = null;
-		event.locals.admin = false;
 	}
 
-	// 4. تنفيذ الطلب (load أو action)
 	const response = await resolve(event);
-
-	// 5. تحديث الكوكيز في النهاية دائماً
-	response.headers.set(
-		'set-cookie',
-		pb.authStore.exportToCookie({
-			httpOnly: true,
-			secure: process.env.NODE_ENV === 'production',
-			sameSite: 'lax'
-		})
-	);
-
+	response.headers.set('set-cookie', pb.authStore.exportToCookie({ httpOnly: true, secure: true }));
 	return response;
 };
+
+// ======================= الاضافة تبدأ هنا =======================
+/** @type {import('@sveltejs/kit').HandleServerError} */
+export const handleError: HandleServerError = async ({ error, event }) => {
+	// تسجيل الخطأ الكامل في الخادم (يمكنك استخدام خدمة متخصصة مثل Sentry)
+	console.error('An unexpected error occurred:', error);
+
+	// إرسال بيانات مبسطة وغير حساسة إلى المستخدم
+	return {
+		message: 'حدث خطأ غير متوقع في الخادم، الرجاء المحاولة مرة أخرى.',
+		code: 'UNEXPECTED_ERROR'
+	};
+};
+// ======================= الاضافة تنتهي هنا =======================

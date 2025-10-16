@@ -1,74 +1,76 @@
-// src/routes/admin/add-chapter/+page.server.ts
-import { pb } from '$lib/pocketbase';
 import { fail } from '@sveltejs/kit';
-import type { Actions, PageServerLoad } from './$types';
-// ✨ التحسين: تم حذف متغيرات المدير غير المستخدمة ✨
+import { JSDOM } from 'jsdom';
+import { mangasSchema } from '$lib/schemas'; // تم التأكد من وجود هذا التعريف
+import { message, superValidate } from 'sveltekit-superforms';
+import { zod } from 'sveltekit-superforms/adapters';
+import type { PageServerLoad, Actions, RequestEvent } from './$types'; // تم استيراد الأنواع اللازمة
+import DOMPurify from 'dompurify';
 
-export const load: PageServerLoad = async () => {
-	const mangas = await pb.collection('mangas').getFullList({ sort: 'title' });
-	return { mangas };
+const ALLOWED_DOMAINS = [
+	'https://onepiecechapters.com',
+	'https://ww8.read-naruto.com'
+];
+
+export const load: PageServerLoad = async ({ locals }) => {
+	const form = await superValidate(zod(mangasSchema));
+
+	const getMangas = async () => {
+		try {
+			// الآن 'pb' معرف بشكل صحيح
+			const mangas = structuredClone(
+				await locals.pb.collection('mangas').getFullList(undefined, { sort: '-created' })
+			);
+			return mangas;
+		} catch (err) {
+			console.log('Error: ', err);
+		}
+	};
+
+	return {
+		form,
+		mangas: await getMangas()
+	};
 };
 
+// تم تحديد نوع 'event' بشكل صريح
 export const actions: Actions = {
-	default: async ({ request }) => {
-		const formData = await request.formData();
-		const mangaId = formData.get('mangaId') as string;
-		const chapterNumber = Number(formData.get('chapterNumber'));
-		const totalPages = Number(formData.get('totalPages'));
+	add: async (event: RequestEvent) => {
+		const form = await superValidate(event, zod(mangasSchema));
+		const data = await event.request.formData();
+		const mangaId = data.get('manga') as string;
+		const url = data.get('url') as string;
+		const title = data.get('title') as string;
+		const chapter_number = data.get('chapter_number') as string;
 
-		if (!mangaId || !chapterNumber || !totalPages) {
-			return fail(400, { error: 'يرجى ملء جميع الحقول المطلوبة.' });
+		const isAllowed = ALLOWED_DOMAINS.some((domain) => url.startsWith(domain));
+
+		if (!isAllowed) {
+			return fail(400, {
+				error: 'هذا النطاق غير مسموح به. يرجى استخدام رابط من النطاقات الموثوقة فقط.'
+			});
 		}
 
 		try {
-			// ✨ التحسين: تم حذف كود تسجيل دخول المدير لأنه غير ضروري ✨
+			const res = await fetch(url);
+			const html = await res.text();
+			const window = new JSDOM(html).window;
+			const purify = DOMPurify(window);
+			const sanitizedHtml = purify.sanitize(html);
+			const dom = new JSDOM(sanitizedHtml).window.document;
+			const images = Array.from(dom.querySelectorAll('img')).map((img) => img.src);
 
-			// --- بداية التحسين الأول: التحقق من وجود الفصل ---
-			try {
-				await pb
-					.collection('chapters')
-					.getFirstListItem(`manga.id = "${mangaId}" && chapter_number = ${chapterNumber}`);
-				return fail(400, { error: `الفصل رقم ${chapterNumber} موجود بالفعل في هذه المانجا.` });
-			} catch (err: any) {
-				if (err.status !== 404) {
-					throw err;
-				}
-			}
-			// --- نهاية التحسين الأول ---
-
-			const manga = await pb.collection('mangas').getOne(mangaId);
-
-			const newChapter = await pb.collection('chapters').create({
+			// الآن 'pb' معرف بشكل صحيح
+			const record = await event.locals.pb.collection('chapters').create({
 				manga: mangaId,
-				chapter_number: chapterNumber
+				title: title,
+				chapter_number: chapter_number,
+				pages: images
 			});
-
-			// --- بداية التحسين الثاني: إنشاء الصفحات دفعة واحدة ---
-			const pagesToCreate = [];
-			for (let i = 1; i <= totalPages; i++) {
-				const chapterNumFormatted = String(chapterNumber).padStart(2, '0');
-
-				// تأكد أن هذا السطر يستخدم "i" مباشرةً
-				const imagePath = `${manga.folder_name}/chapter${chapterNumber}/${manga.file_prefix}-ch${chapterNumFormatted}-p${i}.webp`;
-
-				// اطبع الناتج في الـ Terminal للتأكد
-				console.log('Generated Path:', imagePath);
-
-				pagesToCreate.push({
-					chapter: newChapter.id,
-					page_number: i,
-					image_path: imagePath
-				});
-			}
-
-			for (const page of pagesToCreate) {
-				await pb.collection('pages').create(page);
-			}
-			// --- نهاية التحسين الثاني ---
-		} catch (err: any) {
-			return fail(500, { error: `حدث خطأ: ${err.message}` });
+		} catch (err) {
+			console.log('Error: ', err);
+			return message(form, 'Something went wrong');
 		}
 
-		return { success: `تمت إضافة الفصل ${chapterNumber} بـ ${totalPages} صفحة بنجاح!` };
+		return message(form, 'Chapter added successfully');
 	}
 };

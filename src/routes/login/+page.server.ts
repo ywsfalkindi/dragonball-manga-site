@@ -3,62 +3,62 @@ import { fail, redirect } from '@sveltejs/kit';
 import { pb } from '$lib/pocketbase';
 import { dev } from '$app/environment';
 import type { Actions } from './$types';
+import { message, superValidate } from 'sveltekit-superforms';
+import { zod } from 'sveltekit-superforms/adapters';
+import { loginSchema } from '$lib/schemas';
+import { RateLimiter } from 'sveltekit-rate-limiter/server';
 
-// السر الأول: تعريف مخطط للبيانات المتوقعة باستخدام Zod
-// هذا يضمن أننا لن نحاول حتى الاتصال بقاعدة البيانات ببيانات غير صالحة.
-const loginSchema = z.object({
-	email: z.string().email({ message: 'الرجاء إدخال بريد إلكتروني صالح.' }),
-	password: z.string().min(8, { message: 'يجب أن تكون كلمة المرور 8 أحرف على الأقل.' })
+// إعداد آلية تحديد الطلبات
+const limiter = new RateLimiter({
+	rates: {
+		// ======================= التعديل يبدأ هنا =======================
+		// تم تغيير "ip" إلى "IP" بحرف كبير
+		IP: [10, 'm']
+		// ======================= التعديل ينتهي هنا =======================
+	}
 });
 
+export const load = async () => {
+	const form = await superValidate(zod(loginSchema));
+	return { form };
+};
+
 export const actions: Actions = {
-	default: async ({ request, cookies }) => {
-		const formData = await request.formData();
-		const data = Object.fromEntries(formData);
+	default: async (event) => {
+		const { request, cookies } = event;
+		const form = await superValidate(request, zod(loginSchema));
 
-		// التحقق من البيانات باستخدام المخطط الذي عرفناه
-		const result = loginSchema.safeParse(data);
+		if (!form.valid) {
+			return fail(400, { form });
+		}
 
-		// إذا فشل التحقق، نستخدم `fail` لإرجاع الأخطاء مع البيانات التي أدخلها المستخدم
-		if (!result.success) {
-			const errors = result.error.flatten().fieldErrors;
-			return fail(400, {
-				errors: {
-					email: errors.email?.[0],
-					password: errors.password?.[0]
-				},
-				data: {
-					email: data.email
-				}
+		if (await limiter.isLimited(event)) {
+			return message(form, 'لقد تجاوزت الحد المسموح به من المحاولات، يرجى المحاولة لاحقاً.', {
+				status: 429
 			});
 		}
 
 		try {
-			// الآن فقط، بعد التأكد من صحة البيانات، نتحدث مع PocketBase
-			await pb.collection('users').authWithPassword(result.data.email, result.data.password);
+			await pb
+				.collection('users')
+				.authWithPassword(form.data.email, form.data.password);
 
-			// السر الثالث: تأمين الـ Cookie بأفضل الممارسات
 			const cookieOptions = {
 				path: '/',
-				httpOnly: true, // لا يمكن الوصول إليها من خلال JavaScript
-				secure: !dev, // تُرسل فقط عبر HTTPS في بيئة الإنتاج
-				sameSite: 'lax' as const, // حماية ضد هجمات CSRF
-				maxAge: 60 * 60 * 24 * 30 // صلاحية لمدة 30 يومًا
+				httpOnly: true,
+				secure: !dev,
+				sameSite: 'lax' as const,
+				maxAge: 60 * 60 * 24 * 30
 			};
 
 			cookies.set('pb_auth', pb.authStore.exportToCookie(cookieOptions), cookieOptions);
 		} catch (err: any) {
-			console.error('Login failed:', err);
-			// إرجاع خطأ عام في حال فشل المصادقة من PocketBase
-			return fail(401, {
-				error: 'البريد الإلكتروني أو كلمة المرور غير صحيحة.',
-				data: {
-					email: result.data.email
-				}
+			console.error('Login Error:', err);
+			return message(form, 'البريد الإلكتروني أو كلمة المرور غير صحيحة.', {
+				status: 401
 			});
 		}
 
-		// إذا نجح كل شيء، أعد توجيه المستخدم
 		throw redirect(303, '/');
 	}
 };
