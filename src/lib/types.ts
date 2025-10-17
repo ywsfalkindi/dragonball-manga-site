@@ -135,6 +135,7 @@ export interface CommentUser {
 	username: string;
 	name: string;
 	avatarUrl: string | null;
+	isAdmin?: boolean;
 }
 
 /**

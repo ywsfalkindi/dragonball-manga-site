@@ -10,6 +10,7 @@
 	} from '$lib/stores/settings';
 	import { goto } from '$app/navigation';
 	import { enhance } from '$app/forms';
+	import { invalidateAll } from '$app/navigation';
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import { onMount, onDestroy, tick } from 'svelte';
 	import { browser } from '$app/environment';
@@ -49,18 +50,13 @@
 	let showPageDisplayMenu = false;
 
 	const handleAddComment: SubmitFunction = () => {
-		return async ({ result }) => {
-			if (result.type === 'success' && result.data?.newComment) {
-				// إذا كان التعليق الجديد هو رد، لن نقم بشيء هنا (سيتم تحديث الصفحة بالكامل لاحقًا)
-				if (!result.data.newComment.parentComment) {
-					// أضف التعليق الجديد إلى بداية قائمة التعليقات
-					comments = [result.data.newComment, ...comments];
-				}
-				// أفرغ مربع النص
-				newCommentContent = '';
-			}
-		};
+	return async ({ result }) => {
+		if (result.type === 'success') {
+			newCommentContent = ''; // أفرغ مربع النص
+			await invalidateAll(); // ✨ هذا السطر سيقوم بتحديث قائمة التعليقات تلقائيًا
+		}
 	};
+};
 
 	async function loadMoreComments() {
 		if (isLoadingMoreComments || currentCommentPage >= commentsTotalPages) {
@@ -799,7 +795,7 @@ onMount(async () => {
 			aria-disabled={!nextChapterExists}>الفصل التالي</a
 		>
 	</footer>
-	<section class="container mx-auto px-4 py-10">
+	<section class="container mx-auto px-4 py-10" dir="rtl">
 		<h2 class="mb-6 border-b-2 border-gray-700 pb-2 text-3xl font-bold text-white">
 			التعليقات ({comments.length})
 		</h2>
@@ -810,7 +806,7 @@ onMount(async () => {
 					<textarea
 						name="content"
 						rows="4"
-						placeholder="أضف تعليقك هنا..."
+						placeholder="أكتب تعليق ..."
 						class="w-full rounded border border-gray-600 bg-gray-700 p-2 text-white focus:border-orange-500 focus:outline-none"
 						required
 						bind:value={newCommentContent}

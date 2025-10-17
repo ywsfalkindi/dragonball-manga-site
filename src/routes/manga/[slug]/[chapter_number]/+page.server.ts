@@ -30,48 +30,41 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 					await pb.collection('read_history').create({
 						user: locals.user.id,
 						chapter: chapter.id,
-						manga: manga.id,
-						last_page_read: 1,
-						reading_started_at: new Date().toISOString()
+						last_page_read: 1
 					});
-					lastPageRead = 1;
+				} else {
+					console.error('Error fetching read history:', err);
 				}
 			}
 		}
 
-		if (pageFromUrl > 0 && lastPageRead <= 1) {
+		if (pageFromUrl && pageFromUrl > 0) {
 			lastPageRead = pageFromUrl;
 		}
-		
-		const [pages, nextChapter, commentsResult] = await Promise.all([
-			pb.collection('pages').getFullList({
-				filter: `chapter = "${chapter.id}"`,
-				sort: 'page_number'
-			}),
-			pb
-				.collection('chapters')
-				.getFirstListItem(
-					`manga.id = "${manga.id}" && chapter_number = ${Number(params.chapter_number) + 1}`
-				)
-				.catch(() => null),
-			pb.collection('comments').getList(1, 20, {
-				filter: `chapter = "${chapter.id}" && parentComment = null`,
-				sort: '-created',
-				expand: 'user,likes'
-			})
-		]);
 
-		// ✨ سطر مهم لضمان جاهزية الروابط ✨
-		pages.forEach((page) => {
-			page.page_image_url = pb.files.getURL(page, page.image_path);
+		const pages = await pb.collection('pages').getFullList({
+			filter: `chapter.id = "${chapter.id}"`,
+			sort: 'page_number'
 		});
-		
-		const topLevelComments = commentsResult.items.map((c) => {
+
+		const nextChapterExists =
+			(await pb.collection('chapters').getList(1, 1, {
+				filter: `manga.id = "${manga.id}" && chapter_number > ${params.chapter_number}`
+			})) .items.length > 0;
+
+		const commentsResult = await pb.collection('comments').getList(1, 20, {
+			filter: `chapter = "${chapter.id}" && parentComment = null && isApproved = true`,
+			sort: '-created',
+			expand: 'user,likes'
+		});
+
+		const comments = commentsResult.items.map((c) => {
 			const userObject = c.expand?.user
 				? {
 						id: c.expand.user.id,
 						username: c.expand.user.username,
 						name: c.expand.user.name,
+						isAdmin: c.expand.user.isAdmin, // ✨ تأكد من إضافة هذا الحقل
 						avatarUrl: c.expand.user.avatar
 							? pb.files.getURL(c.expand.user, c.expand.user.avatar, { thumb: '100x100' })
 							: null
@@ -85,76 +78,54 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 				parentComment: c.parentComment || null,
 				likes: c.expand?.likes?.map((like: any) => like.id) || [],
 				user: userObject,
-				replies: []
+				replies: [] // سيتم التعامل مع الردود في الواجهة
 			};
 		});
 
 		return {
-			user: locals.user || null,
+			user: locals.user,
 			manga,
 			chapter,
 			pages,
-			comments: topLevelComments,
+			nextChapterExists,
+			comments,
 			commentsTotalPages: commentsResult.totalPages,
-			nextChapterExists: !!nextChapter,
 			lastPageRead
 		};
 	} catch (err) {
-		throw error(404, 'المانجا أو الفصل المطلوب غير موجود');
+		console.error(err);
+		throw error(404, 'المانجا أو الفصل غير موجود.');
 	}
 };
 
 export const actions: Actions = {
-	addComment: async ({ locals, request, params }) => {
+	addComment: async ({ request, locals, params }) => {
 		if (!locals.user) {
-			throw redirect(303, '/login');
+			return fail(401, { error: 'يجب عليك تسجيل الدخول أولاً' });
 		}
-
-		const data = await request.formData();
-		const rawContent = data.get('content') as string;
-		const parentId = data.get('parentId') as string | null;
-
-		if (!rawContent || rawContent.trim().length < 15) {
-			return fail(400, { error: 'يجب أن يحتوي التعليق على 15 حرفًا على الأقل.' });
-		}
-
 		try {
-			const lastComment = await pb
-				.collection('comments')
-				.getFirstListItem(`user.id = "${locals.user.id}"`, { sort: '-created' });
+			const formData = await request.formData();
+			const content = formData.get('content') as string;
+			const parentId = formData.get('parentId') as string;
+			const chapter = await pb
+				.collection('chapters')
+				.getFirstListItem(`chapter_number = ${params.chapter_number} && manga.slug = "${params.slug}"`);
 
-			const now = new Date();
-			const lastCommentTime = new Date(lastComment.created);
-			const differenceInSeconds = (now.getTime() - lastCommentTime.getTime()) / 1000;
-
-			if (differenceInSeconds < 60) {
-				return fail(429, { error: 'يرجى الانتظار دقيقة واحدة قبل إضافة تعليق جديد.' });
+			if (!content) {
+				return fail(400, { error: 'لا يمكن أن يكون محتوى التعليق فارغًا.' });
 			}
-		} catch (err: any) {
-			if (err.status !== 404) {
-				return fail(500, { error: 'حدث خطأ أثناء التحقق من التعليقات.' });
-			}
-		}
 
-		const content = purify.sanitize(rawContent);
+			const sanitizedContent = purify.sanitize(content);
 
-		const manga = await pb.collection('mangas').getFirstListItem(`slug = "${params.slug}"`);
-		const chapter = await pb
-			.collection('chapters')
-			.getFirstListItem(`manga.id = "${manga.id}" && chapter_number = ${params.chapter_number}`);
-
-		try {
-			const recordData = {
-				content,
+			const data = {
+				content: sanitizedContent,
 				user: locals.user.id,
 				chapter: chapter.id,
-				parentComment: parentId || null
+				parentComment: parentId || null,
+				isApproved: !parentId // الردود تتم الموافقة عليها تلقائياً
 			};
 
-			const createdRecord = await pb.collection('comments').create(recordData);
-			const newCommentRaw = await pb.collection('comments').getOne(createdRecord.id, {
-				expand: 'user'
-			});
+			const newCommentRaw = await pb.collection('comments').create(data, { expand: 'user' });
 			const newComment = {
 				id: newCommentRaw.id,
 				content: newCommentRaw.content,
@@ -203,22 +174,68 @@ export const actions: Actions = {
 				await pb.collection('comments').update(commentId, {
 					'likes-': userId
 				});
+				if (comment.user !== userId) {
+					await grantXp(comment.user, -5);
+				}
 			} else {
 				await pb.collection('comments').update(commentId, {
 					'likes+': userId
 				});
 				if (comment.user !== userId) {
-					try {
-						await grantXp(comment.user, 5);
-					} catch (xpError) {
-						// Ignore error
-					}
+					await grantXp(comment.user, 5);
 				}
 			}
 		} catch (err) {
-			return fail(500, { error: 'فشل التفاعل مع التعليق.' });
+			console.error('Error toggling like:', err);
+			return fail(500, { error: 'حدث خطأ ما.' });
+		}
+		return { success: true };
+	},
+
+	// ✨ بداية الإضافة الجديدة ✨
+	deleteComment: async ({ request, locals }) => {
+		if (!locals.user) {
+			return fail(401, { error: 'يجب تسجيل الدخول للحذف' });
 		}
 
-		return { success: true };
+		const formData = await request.formData();
+		const commentId = formData.get('commentId') as string;
+
+		try {
+			// لا داعي لجلب التعليق، قواعد الـ API في Pocketbase ستحمي من الحذف غير المصرح به
+			await pb.collection('comments').delete(commentId);
+			return { deleteSuccess: true };
+		} catch (err: any) {
+			console.error('Delete Comment Error:', err);
+			return fail(500, { error: 'حدث خطأ أثناء حذف التعليق.' });
+		}
+	},
+
+	editComment: async ({ request, locals }) => {
+		if (!locals.user) {
+			return fail(401, { error: 'يجب تسجيل الدخول للتعديل' });
+		}
+
+		const formData = await request.formData();
+		const commentId = formData.get('commentId') as string;
+		const content = formData.get('content') as string;
+
+		if (!content || content.trim().length === 0) {
+			return fail(400, { error: 'لا يمكن أن يكون التعليق فارغًا.' });
+		}
+		// تنقية المحتوى الجديد
+		const sanitizedContent = purify.sanitize(content);
+
+		try {
+			// قواعد الـ API في Pocketbase ستتحقق من الصلاحية
+			const updatedComment = await pb
+				.collection('comments')
+				.update(commentId, { content: sanitizedContent });
+			return { editSuccess: true, updatedComment };
+		} catch (err: any) {
+			console.error('Edit Comment Error:', err);
+			return fail(500, { error: 'حدث خطأ أثناء تعديل التعليق.' });
+		}
 	}
+	// ✨ نهاية الإضافة الجديدة ✨
 };
