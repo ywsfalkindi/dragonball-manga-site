@@ -30,6 +30,7 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 					await pb.collection('read_history').create({
 						user: locals.user.id,
 						chapter: chapter.id,
+						manga: manga.id,
 						last_page_read: 1
 					});
 				} else {
