@@ -209,33 +209,43 @@ export const actions: Actions = {
 		const data = await request.formData();
 		const commentId = data.get('commentId') as string;
 		const userId = locals.user.id;
+		let newLikesList: string[];
 
 		try {
-			const comment = await pb.collection('comments').getOne(commentId, {
-				fields: 'user,likes'
-			});
-			const isAlreadyLiked = comment.likes?.includes(userId);
+			const comment = await pb.collection('comments').getOne(commentId);
+			const currentLikes = comment.likes || []; // ✨ إضافة: جلب القائمة الحالية
+			const isAlreadyLiked = currentLikes.includes(userId);
 
 			if (isAlreadyLiked) {
 				await pb.collection('comments').update(commentId, {
 					'likes-': userId
 				});
-				if (comment.user !== userId) {
-					await grantXp(comment.user, -5);
+				try {
+					if (comment.user !== userId) {
+						await grantXp(comment.user, -5);
+					}
+				} catch (xpError) {
+					console.error('Failed to grant XP (unlike):', xpError);
 				}
+				newLikesList = currentLikes.filter((id: string) => id !== userId);
 			} else {
 				await pb.collection('comments').update(commentId, {
 					'likes+': userId
 				});
-				if (comment.user !== userId) {
-					await grantXp(comment.user, 5);
+				try {
+					if (comment.user !== userId) {
+						await grantXp(comment.user, 5);
+					}
+				} catch (xpError) {
+					console.error('Failed to grant XP (like):', xpError);
 				}
+				newLikesList = [...currentLikes, userId];
 			}
 		} catch (err) {
 			console.error('Error toggling like:', err);
 			return fail(500, { error: 'حدث خطأ ما.' });
 		}
-		return { success: true };
+		return { likeSuccess: true, newLikes: newLikesList };
 	},
 
 	// ✨ --- بداية الإصلاح الأمني --- ✨
@@ -271,7 +281,7 @@ export const actions: Actions = {
 
 			// 3. إذا كان مصرحاً له، قم بالحذف
 			await pb.collection('comments').delete(commentId);
-			return { success: true };
+			return { deleteSuccess: true }; // ✨ تم التعديل هنا
 		} catch (err: any) {
 			console.error('Delete Comment Error:', err);
 			if (err.status === 404) {
@@ -320,7 +330,7 @@ export const actions: Actions = {
 			const updatedComment = await pb
 				.collection('comments')
 				.update(commentId, { content: sanitizedContent });
-			return { editSuccess: true, updatedComment };
+			return { editSuccess: true, newContent: sanitizedContent };
 		} catch (err: any) {
 			console.error('Edit Comment Error:', err);
 			return fail(500, { error: 'حدث خطأ أثناء تعديل التعليق.' });

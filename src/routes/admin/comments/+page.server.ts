@@ -1,8 +1,13 @@
 // src/routes/admin/comments/+page.server.ts
+import DOMPurify from 'dompurify';
+import { JSDOM } from 'jsdom';
 import { pb } from '$lib/pocketbase';
 import { fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import type { RecordModel } from 'pocketbase';
+
+const window = new JSDOM('').window;
+const purify = DOMPurify(window);
 
 export const load: PageServerLoad = async () => {
 	// --- بداية الحل الجديد: جلب البيانات بشكل أكثر موثوقية ---
@@ -115,12 +120,16 @@ export const actions: Actions = {
 			return fail(400, { editError: 'لا يمكن أن يكون محتوى التعليق فارغًا.' });
 		}
 
+		const sanitizedContent = purify.sanitize(content, {
+			ALLOWED_TAGS: ['br', 'strong', 'em', 'u', 's'] // اختياري: حدد التنسيقات المسموحة
+		});
+
 		try {
-			await pb.collection('comments').update(commentId, { content });
+			await pb.collection('comments').update(commentId, { content: sanitizedContent });
 		} catch (err) {
 			return fail(500, { editError: 'فشل تعديل التعليق.' });
 		}
-		return { editSuccess: true, commentId, content };
+		return { editSuccess: true, commentId, content: sanitizedContent };
 	},
 
 	approveComment: async ({ request }) => {
