@@ -5,16 +5,28 @@ import type { Actions, PageServerLoad } from './$types';
 import { grantXp } from '../../../../hooks.server';
 import DOMPurify from 'dompurify';
 import { JSDOM } from 'jsdom';
+import { z } from 'zod'; // ✨ إضافة Zod للتحقق المنظم
 
 const window = new JSDOM('').window;
 const purify = DOMPurify(window);
 
+// ✨ مخطط التحقق من المدخلات: مكان واحد للتحقق من أن التعليق غير فارغ
+const commentSchema = z.object({
+	content: z.string().trim().min(1, { message: 'التعليق لا يمكن أن يكون فارغاً' })
+});
+
 export const load: PageServerLoad = async ({ locals, params, url }) => {
 	try {
+		// ✨ الإصلاح 1: تحويل chapter_number إلى رقم
+		const chapterNumber = Number(params.chapter_number);
+		if (isNaN(chapterNumber)) {
+			throw error(400, 'رقم فصل غير صالح');
+		}
+
 		const manga = await pb.collection('mangas').getFirstListItem(`slug = "${params.slug}"`);
 		const chapter = await pb
 			.collection('chapters')
-			.getFirstListItem(`manga.id = "${manga.id}" && chapter_number = ${params.chapter_number}`);
+			.getFirstListItem(`manga.id = "${manga.id}" && chapter_number = ${chapterNumber}`); // ✨ استخدام الرقم
 
 		let lastPageRead = 1;
 		const pageFromUrl = Number(url.searchParams.get('page'));
@@ -50,8 +62,8 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 
 		const nextChapterExists =
 			(await pb.collection('chapters').getList(1, 1, {
-				filter: `manga.id = "${manga.id}" && chapter_number > ${params.chapter_number}`
-			})) .items.length > 0;
+				filter: `manga.id = "${manga.id}" && chapter_number > ${chapterNumber}` // ✨ استخدام الرقم
+			})).items.length > 0;
 
 		const commentsResult = await pb.collection('comments').getList(1, 20, {
 			filter: `chapter = "${chapter.id}" && parentComment = null && isApproved = true`,
@@ -65,7 +77,7 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 						id: c.expand.user.id,
 						username: c.expand.user.username,
 						name: c.expand.user.name,
-						isAdmin: c.expand.user.isAdmin, // ✨ تأكد من إضافة هذا الحقل
+						isAdmin: c.expand.user.isAdmin,
 						avatarUrl: c.expand.user.avatar
 							? pb.files.getURL(c.expand.user, c.expand.user.avatar, { thumb: '100x100' })
 							: null
@@ -77,12 +89,11 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 				content: c.content,
 				created: c.created,
 				parentComment: c.parentComment || null,
-				likes: c.expand?.likes?.map((like: any) => like.id) || [],
+				likes: Array.isArray(c.expand?.likes) ? c.expand.likes.map((like: any) => like.id) : [],
 				user: userObject,
-				replies: [] // سيتم التعامل مع الردود في الواجهة
+				replies: []
 			};
 		});
-
 		return {
 			user: locals.user,
 			manga,
@@ -108,24 +119,33 @@ export const actions: Actions = {
 			const formData = await request.formData();
 			const content = formData.get('content') as string;
 			const parentId = formData.get('parentId') as string;
-			const chapter = await pb
-				.collection('chapters')
-				.getFirstListItem(`chapter_number = ${params.chapter_number} && manga.slug = "${params.slug}"`);
 
-			if (!content) {
-				return fail(400, { error: 'لا يمكن أن يكون محتوى التعليق فارغًا.' });
+			// ✨ التحقق باستخدام Zod
+			const validation = commentSchema.safeParse({ content });
+			if (!validation.success) {
+				return fail(400, { error: validation.error.errors[0].message });
 			}
 
-			const sanitizedContent = purify.sanitize(content);
+			// ✨ الإصلاح 1: تحويل chapter_number إلى رقم
+			const chapterNumber = Number(params.chapter_number);
+			if (isNaN(chapterNumber)) {
+				return fail(400, { error: 'رقم فصل غير صالح' });
+			}
 
+			const chapter = await pb
+				.collection('chapters')
+				.getFirstListItem(
+					`chapter_number = ${chapterNumber} && manga.slug = "${params.slug}"` // ✨ استخدام الرقم
+				);
+
+			const sanitizedContent = purify.sanitize(validation.data.content); // ✨ استخدام content من Zod
 			const data = {
 				content: sanitizedContent,
 				user: locals.user.id,
 				chapter: chapter.id,
 				parentComment: parentId || null,
-				isApproved: !parentId // الردود تتم الموافقة عليها تلقائياً
+				isApproved: !parentId
 			};
-
 			const newCommentRaw = await pb.collection('comments').create(data, { expand: 'user' });
 			const newComment = {
 				id: newCommentRaw.id,
@@ -138,6 +158,7 @@ export const actions: Actions = {
 							id: newCommentRaw.expand.user.id,
 							username: newCommentRaw.expand.user.username,
 							name: newCommentRaw.expand.user.name,
+							isAdmin: newCommentRaw.expand.user.isAdmin, // ✨ التأكد من إضافة isAdmin
 							avatarUrl: newCommentRaw.expand.user.avatar
 								? pb.files.getURL(newCommentRaw.expand.user, newCommentRaw.expand.user.avatar, {
 										thumb: '100x100'
@@ -168,7 +189,6 @@ export const actions: Actions = {
 			const comment = await pb.collection('comments').getOne(commentId, {
 				fields: 'user,likes'
 			});
-
 			const isAlreadyLiked = comment.likes?.includes(userId);
 
 			if (isAlreadyLiked) {
@@ -193,7 +213,7 @@ export const actions: Actions = {
 		return { success: true };
 	},
 
-	// ✨ بداية الإضافة الجديدة ✨
+	// ✨ --- بداية الإصلاح الأمني --- ✨
 	deleteComment: async ({ request, locals }) => {
 		if (!locals.user) {
 			return fail(401, { error: 'يجب تسجيل الدخول للحذف' });
@@ -203,7 +223,15 @@ export const actions: Actions = {
 		const commentId = formData.get('commentId') as string;
 
 		try {
-			// لا داعي لجلب التعليق، قواعد الـ API في Pocketbase ستحمي من الحذف غير المصرح به
+			// ✨ الإصلاح الأمني: جلب التعليق أولاً للتحقق من الملكية
+			const originalComment = await pb.collection('comments').getOne(commentId, { fields: 'user' });
+
+			// ✨ التحقق من أن المستخدم هو المالك أو مشرف
+			if (originalComment.user !== locals.user.id && !locals.user.isAdmin) {
+				return fail(403, { error: 'لا تملك صلاحية حذف هذا التعليق' });
+			}
+
+			// الآن الحذف آمن
 			await pb.collection('comments').delete(commentId);
 			return { deleteSuccess: true };
 		} catch (err: any) {
@@ -221,14 +249,25 @@ export const actions: Actions = {
 		const commentId = formData.get('commentId') as string;
 		const content = formData.get('content') as string;
 
-		if (!content || content.trim().length === 0) {
-			return fail(400, { error: 'لا يمكن أن يكون التعليق فارغًا.' });
+		// ✨ التحقق باستخدام Zod
+		const validation = commentSchema.safeParse({ content });
+		if (!validation.success) {
+			return fail(400, { error: validation.error.errors[0].message });
 		}
+
 		// تنقية المحتوى الجديد
-		const sanitizedContent = purify.sanitize(content);
+		const sanitizedContent = purify.sanitize(validation.data.content);
 
 		try {
-			// قواعد الـ API في Pocketbase ستتحقق من الصلاحية
+			// ✨ الإصلاح الأمني: جلب التعليق أولاً للتحقق من الملكية
+			const originalComment = await pb.collection('comments').getOne(commentId, { fields: 'user' });
+
+			// ✨ التحقق من أن المستخدم هو المالك أو مشرف
+			if (originalComment.user !== locals.user.id && !locals.user.isAdmin) {
+				return fail(403, { error: 'لا تملك صلاحية تعديل هذا التعليق' });
+			}
+
+			// الآن التعديل آمن
 			const updatedComment = await pb
 				.collection('comments')
 				.update(commentId, { content: sanitizedContent });
@@ -238,5 +277,5 @@ export const actions: Actions = {
 			return fail(500, { error: 'حدث خطأ أثناء تعديل التعليق.' });
 		}
 	}
-	// ✨ نهاية الإضافة الجديدة ✨
+	// ✨ --- نهاية الإصلاح الأمني --- ✨
 };
