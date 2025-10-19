@@ -26,33 +26,54 @@ export const GET: RequestHandler = async ({ params, url }) => {
 	try {
 		const COMMENTS_PER_PAGE = 20;
 
+		// الخطوة 1: جلب التعليقات الرئيسية
 		const commentsResult = await pb.collection('comments').getList(page, COMMENTS_PER_PAGE, {
 			filter: `chapter = "${chapterId}" && parentComment = null`,
 			sort: '-created',
 			expand: 'user,likes'
 		});
 
-		const comments = commentsResult.items.map((c) => {
-			const userObject = c.expand?.user
-				? {
-						id: c.expand.user.id,
-						username: c.expand.user.username,
-						name: c.expand.user.name,
-						avatarUrl: c.expand.user.avatar
-							? pb.files.getURL(c.expand.user, c.expand.user.avatar, { thumb: '100x100' })
-							: null
-					}
-				: null;
+		// --- ✨ بداية الإضافة السحرية (جلب الردود) ✨ ---
 
-			return {
-				id: c.id,
-				content: c.content,
-				created: c.created,
-				parentComment: c.parentComment || null,
-				likes: c.expand?.likes?.map((like: any) => like.id) || [],
-				user: userObject,
-				replies: []
-			};
+		// الخطوة 2: تجميع IDs التعليقات الرئيسية
+		const parentCommentIds = commentsResult.items.map((c) => c.id);
+
+		let allReplies: any[] = [];
+
+		// الخطوة 3: جلب *كل* الردود لهذه التعليقات في طلب واحد
+		if (parentCommentIds.length > 0) {
+			const repliesFilter = parentCommentIds.map((id) => `parentComment = "${id}"`).join(' || ');
+
+			allReplies = await pb.collection('comments').getFullList({
+				filter: repliesFilter,
+				sort: 'created', // الردود نرتبها من الأقدم للأحدث
+				expand: 'user,likes' // لا ننسى بيانات المستخدمين للردود
+			});
+		}
+
+		// الخطوة 4: (سر الكفاءة) تحويل مصفوفة الردود إلى "خريطة" لسهولة الوصول
+		const repliesMap = new Map<string, any[]>();
+
+		for (const reply of allReplies) {
+			const parentId = reply.parentComment;
+			if (!repliesMap.has(parentId)) {
+				repliesMap.set(parentId, []);
+			}
+			// نستخدم الدالة المساعدة لتنسيق الردود أيضاً
+			repliesMap.get(parentId)!.push(formatComment(reply));
+		}
+
+		// --- ✨ نهاية الإضافة السحرية ✨ ---
+
+		// الخطوة 5: بناء المصفوفة النهائية باستخدام الدالة المساعدة وربط الردود
+		const comments = commentsResult.items.map((c) => {
+			// نستخدم الدالة المساعدة
+			const formattedComment = formatComment(c);
+
+			// هنا نضع الردود من الخريطة
+			formattedComment.replies = repliesMap.get(c.id) || []; // <--- ✨ تم الإصلاح!
+
+			return formattedComment;
 		});
 
 		return json({
@@ -107,36 +128,12 @@ export const POST: RequestHandler = async (event) => {
 
 		const record = await pb.collection('comments').create(data);
 		// لإعادة التعليق الجديد مع بيانات المستخدم، نقوم بعمل expand
-		// لإعادة التعليق الجديد مع بيانات المستخدم، نقوم بعمل expand
 		const newComment = await pb.collection('comments').getOne(record.id, { expand: 'user' });
 
-		// --- بداية الإضافة الأمنية (تنقية الرد) ---
-		// نقوم بتصفية بيانات المستخدم تماماً كما في دالة GET
-		const userObject = newComment.expand?.user
-			? {
-					id: newComment.expand.user.id,
-					username: newComment.expand.user.username,
-					name: newComment.expand.user.name,
-					avatarUrl: newComment.expand.user.avatar
-						? pb.files.getURL(newComment.expand.user, newComment.expand.user.avatar, {
-								thumb: '100x100'
-							})
-						: null
-					// يمكنك إضافة حقل المشرف إذا أردت
-					// isAdmin: newComment.expand.user.isAdmin || false
-				}
-			: null;
+		// ✨ نستخدم الدالة المساعدة لضمان تنسيق موحد وآمن
+		const safeCommentResponse = formatComment(newComment);
 
-		const safeCommentResponse = {
-			id: newComment.id,
-			content: newComment.content,
-			created: newComment.created,
-			parentComment: newComment.parentComment || null,
-			likes: [], // التعليق الجديد ليس له لايكات بعد
-			user: userObject,
-			replies: []
-		};
-		// --- نهاية الإضافة الأمنية ---
+		// --- الكود المكرر الذي يسبب الخطأ تم حذفه ---
 
 		return json(safeCommentResponse, { status: 201 }); // إرجاع الكائن الآمن
 	} catch (err: any) {
@@ -148,3 +145,35 @@ export const POST: RequestHandler = async (event) => {
 	}
 };
 // --- نهاية الكود الجديد ---
+
+// --- ✨ بداية الإضافة: الدالة المساعدة ✨ ---
+
+/**
+ * دالة مساعدة لتنسيق كائن التعليق وإرجاعه بشكل آمن
+ * (تحل مشكلة تكرار الكود بين GET و POST)
+ */
+function formatComment(c: any) {
+	const userObject = c.expand?.user
+		? {
+				id: c.expand.user.id,
+				username: c.expand.user.username,
+				name: c.expand.user.name,
+				avatarUrl: c.expand.user.avatar
+					? pb.files.getURL(c.expand.user, c.expand.user.avatar, { thumb: '100x100' })
+					: null,
+				isAdmin: c.expand.user.isAdmin || false // إضافة حقل المشرف
+			}
+		: null;
+
+	return {
+		id: c.id,
+		content: c.content,
+		created: c.created,
+		parentComment: c.parentComment || null,
+		likes: c.expand?.likes?.map((like: any) => like.id) || [],
+		user: userObject,
+		// هذا يحل مشكلة الخطأ 'never[]'
+		replies: [] as any[]
+	};
+}
+// --- ✨ نهاية الإضافة ✨ ---

@@ -80,8 +80,17 @@
 				throw new Error(err.error || 'حدث خطأ ما');
 			}
 
-			newCommentContent = ''; // أفرغ مربع النص
-			await invalidateAll(); // تحديث قائمة التعليقات
+			const newComment = await response.json();
+
+			// الخطوة 2: أضفه إلى بداية مصفوفة التعليقات
+			comments = [newComment, ...comments];
+
+			// الخطوة 3: أفرغ مربع النص
+			newCommentContent = '';
+
+			//  await invalidateAll(); // <--- ✨ تم حذف هذا السطر
+
+			// --- ✨ نهاية الإصلاح ✨ ---
 		} catch (err: any) {
 			console.error('Failed to submit comment:', err);
 			formError = err.message || 'فشل إرسال التعليق';

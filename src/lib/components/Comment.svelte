@@ -40,9 +40,22 @@
 				throw new Error(err.error || 'حدث خطأ ما');
 			}
 
-			replyContent = ''; // أفرغ مربع النص
-			showReplyForm = false; // أغلق الفورم
-			await invalidateAll(); // تحديث كل التعليقات
+			const newReply = await response.json();
+
+			// الخطوة 2: أضفه إلى مصفوفة الردود الخاصة بالتعليق الأب
+			if (!comment.replies) {
+				comment.replies = [];
+			}
+			// نضع الرد الجديد في بداية القائمة ليظهر أولاً
+			comment.replies = [newReply, ...comment.replies];
+
+			// الخطوة 3: إفراغ الفورم وإغلاقه
+			replyContent = '';
+			showReplyForm = false;
+
+			// await invalidateAll(); // <--- ✨ تم حذف هذا السطر
+
+			// --- ✨ نهاية الإصلاح ✨ ---
 		} catch (err: any) {
 			console.error('Failed to submit reply:', err);
 			replyError = err.message || 'فشل إرسال الرد';
@@ -52,7 +65,7 @@
 	}
 
 	let editing = false;
-	let editedContent = comment.content.replace(/<[^>]*>?/gm, '');
+	let editedContent = comment.content.replace(/<br\s*\/?>/gi, '\n');
 
 	// ✨ إضافة: تعريف دالة تأكيد الحذف
 	const handleDelete: SubmitFunction = ({ cancel }) => {
