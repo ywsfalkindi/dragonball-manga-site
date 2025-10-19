@@ -8,6 +8,11 @@ import { pb } from '$lib/pocketbase';
 import { z } from 'zod';
 import DOMPurify from 'dompurify';
 import { JSDOM } from 'jsdom';
+import { RateLimiter } from 'sveltekit-rate-limiter/server';
+
+const limiter = new RateLimiter({
+	IP: [5, 'm']
+});
 
 // GET handler (from original file)
 export const GET: RequestHandler = async ({ params, url }) => {
@@ -69,11 +74,18 @@ const purify = DOMPurify(window);
 // مخطط التحقق من المدخلات باستخدام Zod
 const addCommentSchema = z.object({
 	content: z.string().trim().min(1, { message: 'التعليق لا يمكن أن يكون فارغاً' }),
-    parentComment: z.string().optional().nullable()
+	parentComment: z.string().optional().nullable()
 });
 
+export const POST: RequestHandler = async (event) => {
+	// <-- ✅ التعديل هنا
+	const { request, locals, params } = event;
 
-export const POST: RequestHandler = async ({ request, locals, params }) => {
+	// 2. نمرر الكائن "event" بالكامل إلى المحدّد
+	if (await limiter.isLimited(event)) {
+		return json({ error: 'لقد تجاوزت حد الطلبات، يرجى المحاولة لاحقاً' }, { status: 429 });
+	}
+
 	if (!locals.user) {
 		return json({ error: 'يجب تسجيل الدخول أولاً' }, { status: 401 });
 	}
@@ -90,19 +102,47 @@ export const POST: RequestHandler = async ({ request, locals, params }) => {
 			content: sanitizedContent, // استخدام المحتوى الآمن
 			user: locals.user.id,
 			chapter: params.chapterId,
-            parentComment: parsedBody.parentComment || null
+			parentComment: parsedBody.parentComment || null
 		};
 
 		const record = await pb.collection('comments').create(data);
 		// لإعادة التعليق الجديد مع بيانات المستخدم، نقوم بعمل expand
+		// لإعادة التعليق الجديد مع بيانات المستخدم، نقوم بعمل expand
 		const newComment = await pb.collection('comments').getOne(record.id, { expand: 'user' });
 
-		return json(newComment, { status: 201 });
+		// --- بداية الإضافة الأمنية (تنقية الرد) ---
+		// نقوم بتصفية بيانات المستخدم تماماً كما في دالة GET
+		const userObject = newComment.expand?.user
+			? {
+					id: newComment.expand.user.id,
+					username: newComment.expand.user.username,
+					name: newComment.expand.user.name,
+					avatarUrl: newComment.expand.user.avatar
+						? pb.files.getURL(newComment.expand.user, newComment.expand.user.avatar, {
+								thumb: '100x100'
+							})
+						: null
+					// يمكنك إضافة حقل المشرف إذا أردت
+					// isAdmin: newComment.expand.user.isAdmin || false
+				}
+			: null;
 
+		const safeCommentResponse = {
+			id: newComment.id,
+			content: newComment.content,
+			created: newComment.created,
+			parentComment: newComment.parentComment || null,
+			likes: [], // التعليق الجديد ليس له لايكات بعد
+			user: userObject,
+			replies: []
+		};
+		// --- نهاية الإضافة الأمنية ---
+
+		return json(safeCommentResponse, { status: 201 }); // إرجاع الكائن الآمن
 	} catch (err: any) {
-        if (err instanceof z.ZodError) {
-            return json({ error: 'البيانات المرسلة غير صالحة', details: err.errors }, { status: 400 });
-        }
+		if (err instanceof z.ZodError) {
+			return json({ error: 'البيانات المرسلة غير صالحة', details: err.errors }, { status: 400 });
+		}
 		console.error('API Error adding comment:', err);
 		return json({ error: 'حدث خطأ أثناء إضافة التعليق' }, { status: 500 });
 	}

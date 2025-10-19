@@ -6,10 +6,7 @@ import { zod } from 'sveltekit-superforms/adapters';
 import type { PageServerLoad, Actions, RequestEvent } from './$types'; // تم استيراد الأنواع اللازمة
 import DOMPurify from 'dompurify';
 
-const ALLOWED_DOMAINS = [
-	'https://onepiecechapters.com',
-	'https://ww8.read-naruto.com'
-];
+const ALLOWED_DOMAINS = ['https://onepiecechapters.com', 'https://ww8.read-naruto.com'];
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const form = await superValidate(zod(mangasSchema));

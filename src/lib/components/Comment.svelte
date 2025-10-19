@@ -3,10 +3,53 @@
 	import type { RecordModel } from 'pocketbase';
 	import type { CommentType } from '$lib/types';
 	import type { SubmitFunction } from '@sveltejs/kit';
+	import { invalidateAll } from '$app/navigation';
 
 	export let comment: CommentType;
 	export let user: RecordModel | null;
+	export let chapterId: string;
 	let showReplyForm = false;
+
+	let replyContent = '';
+	let isReplying = false;
+	let replyError: string | null = null;
+
+	async function handleReplySubmit() {
+		if (!replyContent.trim()) {
+			replyError = 'الرد لا يمكن أن يكون فارغاً';
+			return;
+		}
+		if (isReplying) return;
+
+		isReplying = true;
+		replyError = null;
+
+		try {
+			const response = await fetch(`/api/comments/${chapterId}`, {
+				// نستخدم chapterId الذي أضفناه
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					content: replyContent,
+					parentComment: comment.id // ID التعليق الأب
+				})
+			});
+
+			if (!response.ok) {
+				const err = await response.json();
+				throw new Error(err.error || 'حدث خطأ ما');
+			}
+
+			replyContent = ''; // أفرغ مربع النص
+			showReplyForm = false; // أغلق الفورم
+			await invalidateAll(); // تحديث كل التعليقات
+		} catch (err: any) {
+			console.error('Failed to submit reply:', err);
+			replyError = err.message || 'فشل إرسال الرد';
+		} finally {
+			isReplying = false;
+		}
+	}
 
 	let editing = false;
 	let editedContent = comment.content.replace(/<[^>]*>?/gm, '');
@@ -127,27 +170,32 @@
 		</div>
 
 		{#if showReplyForm}
-			<form method="POST" action="?/addComment" use:enhance class="mt-4 mr-4 text-right">
+			<form on:submit|preventDefault={handleReplySubmit} class="mt-4 mr-4 text-right">
 				<div class="mb-2 border-r-4 border-gray-600 pr-3 text-sm text-gray-400">
 					<p class="font-bold text-gray-300">ردًا على {comment.user?.username || 'مستخدم'}:</p>
 					<blockquote class="line-clamp-2 italic opacity-80">
 						{@html comment.content}
 					</blockquote>
 				</div>
-				<input type="hidden" name="parentId" value={comment.id} />
 				<textarea
 					name="content"
 					rows="2"
 					placeholder="اكتب ردك..."
 					class="w-full rounded border border-gray-600 bg-gray-700 p-2 text-right text-white focus:border-orange-500 focus:outline-none"
 					required
+					bind:value={replyContent}
+					disabled={isReplying}
 				></textarea>
+				{#if replyError}
+					<p class="mt-2 text-sm text-red-500">{replyError}</p>
+				{/if}
 				<div class="mt-2 flex items-center justify-end gap-2">
 					<button
 						type="submit"
-						class="rounded bg-orange-600 px-4 py-1 text-sm font-bold text-white hover:bg-orange-700"
+						class="rounded bg-orange-600 px-4 py-1 text-sm font-bold text-white hover:bg-orange-700 disabled:opacity-50"
+						disabled={isReplying}
 					>
-						إرسال الرد
+						{isReplying ? '...' : 'إرسال الرد'}
 					</button>
 					<button
 						type="button"

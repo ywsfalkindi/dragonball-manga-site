@@ -9,15 +9,12 @@
 		verticalPagesGap
 	} from '$lib/stores/settings';
 	import { goto } from '$app/navigation';
-	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
-	import type { SubmitFunction } from '@sveltejs/kit';
 	import { onMount, onDestroy, tick } from 'svelte';
 	import { browser } from '$app/environment';
 	import { PUBLIC_CDN_URL } from '$env/static/public';
 	import Comment from '$lib/components/Comment.svelte';
 	export let data: PageData;
-	export let form: ActionData;
 
 	$: ({
 		user,
@@ -31,9 +28,15 @@
 	} = data);
 	$: currentChapter = chapter ? Number(chapter.chapter_number) : 0;
 
-	$: currentPageIndex = pages ? Math.max(0, Math.min((lastPageRead || 1) - 1, pages.length - 1)) : 0;
-    $: if (browser) {
-		console.log('%cPage Index Changed To:', 'color: lightblue; font-weight: bold;', currentPageIndex);
+	$: currentPageIndex = pages
+		? Math.max(0, Math.min((lastPageRead || 1) - 1, pages.length - 1))
+		: 0;
+	$: if (browser) {
+		console.log(
+			'%cPage Index Changed To:',
+			'color: lightblue; font-weight: bold;',
+			currentPageIndex
+		);
 	}
 	$: progress = pages.length > 0 ? ((currentPageIndex + 1) / pages.length) * 100 : 0;
 	let imagesToPreload: string[] = [];
@@ -49,14 +52,43 @@
 	let initialLoadComplete = false; // ✅ أضف هذا السطر
 	let showPageDisplayMenu = false;
 
-	const handleAddComment: SubmitFunction = () => {
-	return async ({ result }) => {
-		if (result.type === 'success') {
-			newCommentContent = ''; // أفرغ مربع النص
-			await invalidateAll(); // ✨ هذا السطر سيقوم بتحديث قائمة التعليقات تلقائيًا
+	let isSubmitting = false;
+	let formError: string | null = null;
+
+	async function handleMainSubmit() {
+		if (!newCommentContent.trim()) {
+			formError = 'التعليق لا يمكن أن يكون فارغاً';
+			return;
 		}
-	};
-};
+		if (isSubmitting) return;
+
+		isSubmitting = true;
+		formError = null;
+
+		try {
+			const response = await fetch(`/api/comments/${chapter.id}`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					content: newCommentContent,
+					parentComment: null // هذا هو الفورم الرئيسي
+				})
+			});
+
+			if (!response.ok) {
+				const err = await response.json();
+				throw new Error(err.error || 'حدث خطأ ما');
+			}
+
+			newCommentContent = ''; // أفرغ مربع النص
+			await invalidateAll(); // تحديث قائمة التعليقات
+		} catch (err: any) {
+			console.error('Failed to submit comment:', err);
+			formError = err.message || 'فشل إرسال التعليق';
+		} finally {
+			isSubmitting = false;
+		}
+	}
 
 	async function loadMoreComments() {
 		if (isLoadingMoreComments || currentCommentPage >= commentsTotalPages) {
@@ -87,47 +119,44 @@
 	}
 
 	async function updateProgress(pageIndex: number) {
-	// إذا كان زائراً، لا تفعل شيئاً
-	if (!user) return;
-    console.log('%c1. updateProgress CALLED for index:', 'color: orange;', pageIndex);
-	// هذه هي خدعة الـ "debounce":
-	// أولاً، نلغي أي مؤقت حفظ سابق لم يتم تنفيذه بعد.
-	clearTimeout(updateTimeout);
+		// إذا كان زائراً، لا تفعل شيئاً
+		if (!user) return;
+		console.log('%c1. updateProgress CALLED for index:', 'color: orange;', pageIndex);
+		// هذه هي خدعة الـ "debounce":
+		// أولاً، نلغي أي مؤقت حفظ سابق لم يتم تنفيذه بعد.
+		clearTimeout(updateTimeout);
 
-	// ثانياً، نضبط مؤقتاً جديداً. سيتم إرسال طلب الحفظ بعد 500 جزء من الثانية.
-	// إذا قام المستخدم بتغيير الصفحة مرة أخرى خلال هذه الفترة، سيتم إلغاء هذا المؤقت والبدء من جديد.
-	updateTimeout = setTimeout(async () => {
-		console.log('%c2. SENDING REQUEST to API now...', 'color: yellow;');
-		try {
-			const response = await fetch('/api/update-progress', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					chapterId: chapter.id,
-					// نرسل رقم الصفحة الفعلي (index + 1)
-					page: pageIndex + 1
-				})
-			});
+		// ثانياً، نضبط مؤقتاً جديداً. سيتم إرسال طلب الحفظ بعد 500 جزء من الثانية.
+		// إذا قام المستخدم بتغيير الصفحة مرة أخرى خلال هذه الفترة، سيتم إلغاء هذا المؤقت والبدء من جديد.
+		updateTimeout = setTimeout(async () => {
+			console.log('%c2. SENDING REQUEST to API now...', 'color: yellow;');
+			try {
+				const response = await fetch('/api/update-progress', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						chapterId: chapter.id,
+						// نرسل رقم الصفحة الفعلي (index + 1)
+						page: pageIndex + 1
+					})
+				});
 
-			if (!response.ok) {
+				if (!response.ok) {
 					console.error('API Error Response:', await response.text());
 				} else {
 					console.log('%c3. SUCCESS! Progress saved.', 'color: lightgreen; font-weight: bold;');
 				}
-				
-		} catch (err) {
-			console.error('Failed to update progress (Fetch Error):', err);
-			// في حال فشل الحفظ، يمكننا إظهار رسالة للمستخدم لاحقاً
-			console.error('Failed to update progress:', err);
-		}
-	}, 500); // تأخير لمدة نصف ثانية
-}
+			} catch (err) {
+				console.error('Failed to update progress (Fetch Error):', err);
+				// في حال فشل الحفظ، يمكننا إظهار رسالة للمستخدم لاحقاً
+				console.error('Failed to update progress:', err);
+			}
+		}, 500); // تأخير لمدة نصف ثانية
+	}
 
 	$: if (browser && pages.length > 0 && initialLoadComplete) {
 		updateProgress(currentPageIndex);
 	}
-
-	
 
 	function hideUI() {
 		if (showSettings || showThumbnails) return;
@@ -161,9 +190,9 @@
 	}
 
 	let observer: IntersectionObserver;
-let imageElements: HTMLImageElement[] = [];
+	let imageElements: HTMLImageElement[] = [];
 
-onMount(async () => {
+	onMount(async () => {
 		// الخطوة 1: انتظر حتى يتم رسم كل شيء على الشاشة
 		await tick();
 
@@ -174,7 +203,7 @@ onMount(async () => {
 				pageElement.scrollIntoView({ behavior: 'auto', block: 'start' });
 			}
 		}
-		
+
 		resetTimer();
 
 		// الخطوة 3: انتظر جزءاً من الثانية قبل تشغيل المراقب الذكي
@@ -218,7 +247,7 @@ onMount(async () => {
 			initialLoadComplete = true;
 		}, 100); // تأخير بسيط لكنه حاسم
 	});
-	
+
 	onDestroy(() => {
 		if (observer) observer.disconnect();
 		clearTimeout(inactivityTimer);
@@ -800,8 +829,7 @@ onMount(async () => {
 			التعليقات ({comments.length})
 		</h2>
 		{#if user}
-			<form method="POST" action="?/addComment" use:enhance={handleAddComment} class="mb-8">
-				<input type="hidden" name="parentId" value="" />
+			<form on:submit|preventDefault={handleMainSubmit} class="mb-8">
 				<div class="rounded-lg bg-gray-800 p-4">
 					<textarea
 						name="content"
@@ -810,15 +838,17 @@ onMount(async () => {
 						class="w-full rounded border border-gray-600 bg-gray-700 p-2 text-white focus:border-orange-500 focus:outline-none"
 						required
 						bind:value={newCommentContent}
+						disabled={isSubmitting}
 					></textarea>
-					{#if form?.error}
-						<p class="mt-2 text-sm text-red-500">{form.error}</p>
+					{#if formError}
+						<p class="mt-2 text-sm text-red-500">{formError}</p>
 					{/if}
 					<button
 						type="submit"
-						class="mt-4 rounded-lg bg-orange-600 px-6 py-2 font-bold text-white hover:bg-orange-700"
+						class="mt-4 rounded-lg bg-orange-600 px-6 py-2 font-bold text-white hover:bg-orange-700 disabled:opacity-50"
+						disabled={isSubmitting}
 					>
-						إرسال التعليق
+						{isSubmitting ? 'جارٍ الإرسال...' : 'إرسال التعليق'}
 					</button>
 				</div>
 			</form>
@@ -832,7 +862,7 @@ onMount(async () => {
 		{/if}
 		<div class="space-y-6">
 			{#each comments as comment}
-				<Comment {comment} {user} />
+				<Comment {comment} {user} chapterId={chapter.id} />
 			{:else}
 				<p class="text-center text-gray-400">لا توجد تعليقات بعد. كن أول من يعلق!</p>
 			{/each}

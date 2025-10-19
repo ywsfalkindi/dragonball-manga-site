@@ -39,9 +39,7 @@ export const actions: Actions = {
 		}
 
 		try {
-			await pb
-				.collection('users')
-				.authWithPassword(form.data.email, form.data.password);
+			await pb.collection('users').authWithPassword(form.data.email, form.data.password);
 
 			const cookieOptions = {
 				path: '/',

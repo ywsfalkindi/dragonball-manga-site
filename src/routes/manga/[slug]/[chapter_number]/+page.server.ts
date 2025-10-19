@@ -6,6 +6,15 @@ import { grantXp } from '../../../../hooks.server';
 import DOMPurify from 'dompurify';
 import { JSDOM } from 'jsdom';
 import { z } from 'zod'; // ✨ إضافة Zod للتحقق المنظم
+import { RateLimiter } from 'sveltekit-rate-limiter/server';
+
+const contentLimiter = new RateLimiter({
+	IP: [10, 'm']
+});
+
+const likeLimiter = new RateLimiter({
+	IP: [30, 'm']
+});
 
 const window = new JSDOM('').window;
 const purify = DOMPurify(window);
@@ -61,9 +70,11 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 		});
 
 		const nextChapterExists =
-			(await pb.collection('chapters').getList(1, 1, {
-				filter: `manga.id = "${manga.id}" && chapter_number > ${chapterNumber}` // ✨ استخدام الرقم
-			})).items.length > 0;
+			(
+				await pb.collection('chapters').getList(1, 1, {
+					filter: `manga.id = "${manga.id}" && chapter_number > ${chapterNumber}` // ✨ استخدام الرقم
+				})
+			).items.length > 0;
 
 		const commentsResult = await pb.collection('comments').getList(1, 20, {
 			filter: `chapter = "${chapter.id}" && parentComment = null && isApproved = true`,
@@ -111,7 +122,15 @@ export const load: PageServerLoad = async ({ locals, params, url }) => {
 };
 
 export const actions: Actions = {
-	addComment: async ({ request, locals, params }) => {
+	addComment: async (event) => {
+		// <-- ✅ التعديل هنا
+		// --- ✅ بداية الإضافة: محدّد المعدل ---
+		if (await contentLimiter.isLimited(event)) {
+			return fail(429, { error: 'لقد تجاوزت حد الطلبات، يرجى المحاولة لاحقاً' });
+		}
+		const { request, locals, params } = event;
+		// --- ✅ نهاية الإضافة ---
+
 		if (!locals.user) {
 			return fail(401, { error: 'يجب عليك تسجيل الدخول أولاً' });
 		}
@@ -132,11 +151,9 @@ export const actions: Actions = {
 				return fail(400, { error: 'رقم فصل غير صالح' });
 			}
 
-			const chapter = await pb
-				.collection('chapters')
-				.getFirstListItem(
-					`chapter_number = ${chapterNumber} && manga.slug = "${params.slug}"` // ✨ استخدام الرقم
-				);
+			const chapter = await pb.collection('chapters').getFirstListItem(
+				`chapter_number = ${chapterNumber} && manga.slug = "${params.slug}"` // ✨ استخدام الرقم
+			);
 
 			const sanitizedContent = purify.sanitize(validation.data.content); // ✨ استخدام content من Zod
 			const data = {
@@ -176,7 +193,15 @@ export const actions: Actions = {
 		}
 	},
 
-	toggleLike: async ({ locals, request }) => {
+	toggleLike: async (event) => {
+		// <-- ✅ التعديل هنا
+		// --- ✅ بداية الإضافة: محدّد المعدل (خاص بالإعجاب) ---
+		if (await likeLimiter.isLimited(event)) {
+			return fail(429, { error: 'لقد تجاوزت حد الطلبات، يرجى المحاولة لاحقاً' });
+		}
+		const { request, locals } = event;
+		// --- ✅ نهاية الإضافة ---
+
 		if (!locals.user) {
 			throw redirect(303, '/login');
 		}
@@ -214,7 +239,15 @@ export const actions: Actions = {
 	},
 
 	// ✨ --- بداية الإصلاح الأمني --- ✨
-	deleteComment: async ({ request, locals }) => {
+	deleteComment: async (event) => {
+		// <-- ✅ التعديل هنا
+		// --- ✅ بداية الإضافة: محدّد المعدل ---
+		if (await contentLimiter.isLimited(event)) {
+			return fail(429, { error: 'لقد تجاوزت حد الطلبات، يرجى المحاولة لاحقاً' });
+		}
+		const { request, locals } = event; // <-- فك الكائن
+		// --- ✅ نهاية الإضافة ---
+
 		if (!locals.user) {
 			return fail(401, { error: 'يجب تسجيل الدخول للحذف' });
 		}
@@ -222,25 +255,41 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const commentId = formData.get('commentId') as string;
 
+		if (!commentId) {
+			return fail(400, { error: 'معرّف التعليق مطلوب' });
+		}
+
 		try {
-			// ✨ الإصلاح الأمني: جلب التعليق أولاً للتحقق من الملكية
+			// 1. جلب التعليق للتحقق من الملكية
 			const originalComment = await pb.collection('comments').getOne(commentId, { fields: 'user' });
 
-			// ✨ التحقق من أن المستخدم هو المالك أو مشرف
+			// 2. التحقق من أن المستخدم هو المالك أو مشرف
+			// (نفترض أن لديك locals.user.isAdmin، عدّل الشرط إذا كان مختلفاً)
 			if (originalComment.user !== locals.user.id && !locals.user.isAdmin) {
 				return fail(403, { error: 'لا تملك صلاحية حذف هذا التعليق' });
 			}
 
-			// الآن الحذف آمن
+			// 3. إذا كان مصرحاً له، قم بالحذف
 			await pb.collection('comments').delete(commentId);
-			return { deleteSuccess: true };
+			return { success: true };
 		} catch (err: any) {
 			console.error('Delete Comment Error:', err);
+			if (err.status === 404) {
+				return fail(404, { error: 'التعليق غير موجود' });
+			}
 			return fail(500, { error: 'حدث خطأ أثناء حذف التعليق.' });
 		}
 	},
 
-	editComment: async ({ request, locals }) => {
+	editComment: async (event) => {
+		// <-- ✅ التعديل هنا
+		// --- ✅ بداية الإضافة: محدّد المعدل ---
+		if (await contentLimiter.isLimited(event)) {
+			return fail(429, { error: 'لقد تجاوزت حد الطلبات، يرجى المحاولة لاحقاً' });
+		}
+		const { request, locals } = event;
+		// --- ✅ نهاية الإضافة ---
+
 		if (!locals.user) {
 			return fail(401, { error: 'يجب تسجيل الدخول للتعديل' });
 		}
